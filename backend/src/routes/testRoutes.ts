@@ -28,11 +28,12 @@ router.get('/debug-guardians', async (req, res) => {
       })),
       records: guardianRecords.map(g => ({
         id: g._id,
+        userId: g.userId,
         guardianId: g.guardianId,
-        firstName: g.firstName,
-        lastName: g.lastName,
-        email: g.email,
-        phoneNumber: g.phoneNumber
+        occupation: g.occupation,
+        relationshipToStudent: g.relationshipToStudent,
+        address: g.address,
+        alternatePhoneNumber: g.alternatePhoneNumber
       }))
     };
     
@@ -56,10 +57,11 @@ router.get('/debug-staff', async (req, res) => {
       })),
       records: staffRecords.map(s => ({
         id: s._id,
-        email: s.email,
-        firstName: s.firstName, 
-        lastName: s.lastName,
-        phone_number: s.phone_number
+        userId: s.userId,
+        staffId: s.staffId,
+        department: s.department,
+        position: s.position,
+        emergencyPhone: s.emergencyContact?.phoneNumber
       }))
     };
     
@@ -85,19 +87,20 @@ router.post('/reset-staff-passwords', async (req, res) => {
     for (const user of staffUsers) {
       console.log(`Processing staff user: ${user.email}`);
       
-      // Find matching staff record by email
-      const staffRecord = staffRecords.find(s => s.email === user.email);
-      
-      if (staffRecord && staffRecord.phone_number) {
+      // Find matching staff record by userId
+      const staffRecord = staffRecords.find(s => s.userId.toString() === user._id.toString());
+      const phoneNumber = staffRecord?.emergencyContact?.phoneNumber;
+
+      if (staffRecord && phoneNumber) {
         // Hash the phone number as password
-        const hashedPassword = await bcrypt.hash(staffRecord.phone_number, 10);
+        const hashedPassword = await bcrypt.hash(phoneNumber, 10);
         
         // Update the user's password
         await User.findByIdAndUpdate(user._id, { 
           password: hashedPassword 
         });
         
-        console.log(`Updated password for staff: ${user.email} -> phone: ${staffRecord.phone_number}`);
+        console.log(`Updated password for staff: ${user.email} -> phone: ${phoneNumber}`);
         updated++;
       } else {
         console.log(`No phone number found for staff: ${user.email}`);
