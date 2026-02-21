@@ -23,7 +23,7 @@ interface selectedSubjectsDataI {
 const ResultOptions: React.FC<{
   optionsToggle: boolean;
   setOptionsToggle: React.Dispatch<React.SetStateAction<boolean>>;
-  classActiveID: number;
+  classActiveID: number | string;
   setFilePreview: React.Dispatch<React.SetStateAction<[]>>;
   setFilePreviewToggle: React.Dispatch<React.SetStateAction<boolean>>;
   fileName: string;

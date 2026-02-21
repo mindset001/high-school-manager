@@ -26,7 +26,7 @@ interface FormInterface {
   middle_name: string;
   image: File | null;
   student_class: string;
-  schoolclass: number;
+  schoolclass: number | string;
   date_of_birth: Date | null;
   gender: string;
   fathers_name: string;
