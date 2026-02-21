@@ -258,7 +258,7 @@ const StudentAdminNames: React.FC = () => {
     console.log("classNameActive Dataaa :", className);
   }, [className]);
   //Get class id with filter of classes and classnames
-  const classNameID: number[] = useMemo(() => {
+  const classNameID: string[] = useMemo(() => {
     return classes
       .filter((classes) => {
         return classes.name.toLowerCase() === className;
@@ -274,7 +274,7 @@ const StudentAdminNames: React.FC = () => {
   // FETCH CLASS FEE INFORMATION
   const {
     data: classFeeData,
-    isLoading: isClassFeeLoading,
+    isLoading: _isClassFeeLoading,
   } = useQuery({
     queryKey: ["baseClassFee", classNameID[0]],
     queryFn: () => getBaseClass(),
@@ -432,7 +432,7 @@ const StudentAdminNames: React.FC = () => {
     
     console.log('=== Mapped Students ===');
     console.log('Total students:', mappedStudents.length);
-    console.log('Students with payments:', mappedStudents.filter(s => s.tuition_paid > 0).length);
+    console.log('Students with payments:', mappedStudents.filter((s: any) => s.tuition_paid > 0).length);
     console.log('=======================');
     
     return mappedStudents;

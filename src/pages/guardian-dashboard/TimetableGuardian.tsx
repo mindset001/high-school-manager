@@ -82,7 +82,7 @@ const TimetablesGuardian = () => {
     return classPeriods;
   }
 
-  const timeTables: [] = useMemo(() => {
+  const timeTables: any[] = useMemo(() => {
     if (!data || !data.data || !data.data.data) return []; // Handle undefined cases
 
     return data.data.data.map((timeTable: any) => ({

@@ -21,7 +21,7 @@ const AddCalender: React.FC<AddCalenderProps> = ({ onSubmit }) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
-    });
+    } as EventInterface);
   };
 
   const handleSubmit = (e: React.FormEvent) => {

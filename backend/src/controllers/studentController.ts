@@ -75,7 +75,7 @@ export const createStudent = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     // Generate unique email if not provided
-    let generatedEmail: string;
+    let generatedEmail: string = '';
     if (email) {
       generatedEmail = email.toLowerCase();
       // Check if provided email already exists

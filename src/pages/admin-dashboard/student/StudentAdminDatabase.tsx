@@ -1203,7 +1203,7 @@ const StudentAdminDatabase: React.FC = () => {
                 onClick={() => {
                   deleteMutation.mutate({
                     id: classNameID,
-                    studentid: newStudentData.id,
+                    studentid: Number(newStudentData.id),
                   });
                   // if (isSuccess) {
                   //   alert("Deleted");

@@ -189,7 +189,7 @@ const StudentAdminOverview: React.FC = () => {
                 <button
                   onClick={() => {
                     setStudentDropDown({
-                      id: classdata.id,
+                      id: Number(classdata.id),
                       class:
                         studentDropDown.class === classdata.name
                           ? ""

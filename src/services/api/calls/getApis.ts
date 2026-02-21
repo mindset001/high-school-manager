@@ -42,7 +42,7 @@ export const getStudents = () => {
   return apiClient.get(`guardians/ward`);
 };
 
-export const getStudentsId = (id: number) => {
+export const getStudentsId = (id: number | string) => {
   return apiClient.get(`students/${id}`);
 };
 
