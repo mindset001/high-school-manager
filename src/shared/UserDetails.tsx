@@ -21,7 +21,7 @@ const UserDetails = ({ user }: IUserDetailsProps) => {
   const { mutate: deleteMutate, isPending: isDeletingUser } = useDeleteStaff();
   const { classNameData, isClassLoading } = useClasses();
 
-  const [classes, setClasses] = useState<{ id: number; name: string }[]>([]);
+  const [classes, setClasses] = useState<{ id: string | number; name: string }[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [imageFile, setImageFile] = useState<File>();
   const [editableUser, setEditableUser] = useState(user);

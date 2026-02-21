@@ -2,11 +2,9 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  commonPasswordsImport,
   consecutiveDotsRegexImport,
   emailRegexImport,
   invalidEmailCharRegexImport,
-  specialCharRegexImport,
 } from "../../utils/regex";
 import { Warning } from "../../assets/images";
 import HidePasswordSVG from "../../components/svg/HidePasswordSVG";
@@ -35,14 +33,12 @@ const StaffLogin: React.FC = () => {
   //////////////////////////////
   // VALIDATION REGEX
   ////////////////////////////////////
-  const specialCharRegex = specialCharRegexImport;
   //   const codeInjectionRegex = codeInjectionRegexImport;
   //   const sqlInjectionRegex = sqlInjectionRegexImport;
   // const invalidFullnameCharRegex = invalidFullnameCharRegexImport;
   const emailRegex = emailRegexImport;
   const invalidEmailCharRegex = invalidEmailCharRegexImport;
   const consecutiveDotsRegex = consecutiveDotsRegexImport;
-  const commonPasswords = commonPasswordsImport;
 
   ///////////////////////
   // EMAIL ERROR AND VALIDATION

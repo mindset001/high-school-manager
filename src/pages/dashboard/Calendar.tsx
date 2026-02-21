@@ -25,13 +25,9 @@ const Calendar: React.FC = () => {
 
   // ALERT ERROR IF REQUEST FAILS
   isError && showErrorToast(`${error.message}`)
-  const calender: {
-    event: string;
-    date: string;
-    id: string;
-  }[] = useMemo(
+  const calender: EventInterface[] = useMemo(
     () =>
-      (data &&
+      ((data &&
         data.data.data &&
         Array.isArray(data.data.data) &&
         data.data.data.map(
@@ -41,7 +37,7 @@ const Calendar: React.FC = () => {
             id: event._id,
           })
         )) ||
-      [],
+      []) as EventInterface[],
     [data]
   );
   const months = [

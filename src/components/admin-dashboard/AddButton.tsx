@@ -14,7 +14,7 @@ interface AddButtonProps {
   addToggle: boolean;
   setAddToggle: (toggle: boolean) => void;
   className: string;
-  classNameID: number;
+  classNameID: number | string;
   studentIDs: number[];
 }
 

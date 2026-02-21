@@ -50,6 +50,7 @@ export interface baseClassInterface {
   games?: number;
   library_fee?: number;
   extra_activities?: number;
+  starterPack?: number;
 }
 
 export interface totalPercentageValueI {

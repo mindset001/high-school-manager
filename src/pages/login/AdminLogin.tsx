@@ -2,11 +2,9 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  commonPasswordsImport,
   consecutiveDotsRegexImport,
   emailRegexImport,
   invalidEmailCharRegexImport,
-  specialCharRegexImport,
 } from "../../utils/regex";
 import { Warning } from "../../assets/images";
 import HidePasswordSVG from "../../components/svg/HidePasswordSVG";
@@ -34,14 +32,12 @@ const AdminLogin: React.FC = () => {
   //////////////////////////////
   // VALIDATION REGEX
   ////////////////////////////////////
-  const specialCharRegex = specialCharRegexImport;
   //   const codeInjectionRegex = codeInjectionRegexImport;
   //   const sqlInjectionRegex = sqlInjectionRegexImport;
   // const invalidFullnameCharRegex = invalidFullnameCharRegexImport;
   const emailRegex = emailRegexImport;
   const invalidEmailCharRegex = invalidEmailCharRegexImport;
   const consecutiveDotsRegex = consecutiveDotsRegexImport;
-  const commonPasswords = commonPasswordsImport;
 
   ///////////////////////
   // EMAIL ERROR AND VALIDATION
@@ -95,14 +91,9 @@ const AdminLogin: React.FC = () => {
       value: string;
     };
   }): void => {
-    const isNotSpecialChar = !specialCharRegex.test(e.target.value);
     const isEmpty = e.target.value.trim() == "" || !e.target.value;
     const isSpaced = e.target.value.split(" ").length >= 2;
     const isShort = e.target.value.length <= 5; // Reduced from 7 to 5 for testing
-    const isCommon = commonPasswords.includes(e.target.value.toLowerCase());
-    const hasNotCapitalLetter = !/[A-Z]/.test(e.target.value);
-    const hasNotSmallLetter = !/[a-z]/.test(e.target.value);
-    const hasNotNumber = !/[0-9]/.test(e.target.value);
 
     // Simplified validation for development - only check empty, spaces, and length
     isEmpty ||

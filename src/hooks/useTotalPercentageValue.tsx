@@ -4,7 +4,7 @@ import { getHomeAnalytic } from "../services/api/calls/getApis";
 import { totalPercentageValueI } from "../types/user.type";
 
 export interface EventInterface {
-  id: number;
+  id: number | string;
   event: string;
   date: string;
 }

@@ -16,7 +16,7 @@ export const getSubjects = () => {
   return apiClient.get(`subjects/`);
 };
 
-export const getClassStudentsId = (id: number) => {
+export const getClassStudentsId = (id: number | string) => {
   return apiClient.get(`classes/${id}/student/`);
 };
 

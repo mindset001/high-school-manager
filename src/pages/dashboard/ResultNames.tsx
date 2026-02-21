@@ -155,7 +155,7 @@ const ResultNames: React.FC = () => {
     console.log("classNameActive Dataaa :", className);
   }, [className]);
   //Get class id with filter of classes and classnames
-  const classNameID: number[] = useMemo(() => {
+  const classNameID: string[] = useMemo(() => {
     return classes
       .filter((classes) => {
         return classes.name.toLowerCase() === className;
