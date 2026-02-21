@@ -8,6 +8,8 @@ import {
   addStudentToClass,
   removeStudentFromClass,
   getStudentsByClass,
+  addSubjectsToClass,
+  removeSubjectFromClass,
 } from '../controllers/classController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
@@ -25,5 +27,7 @@ router.put('/:id', authorize('admin', 'staff'), updateClass);
 router.delete('/:id', authorize('admin'), deleteClass);
 router.post('/:id/students', authorize('admin'), addStudentToClass);
 router.delete('/:id/students/:studentId', authorize('admin'), removeStudentFromClass);
+router.post('/:id/subjects', authorize('admin', 'staff'), addSubjectsToClass);
+router.delete('/:id/subjects', authorize('admin', 'staff'), removeSubjectFromClass);
 
 export default router;

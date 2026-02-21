@@ -65,6 +65,7 @@ export const createStudent = async (req: AuthRequest, res: Response): Promise<vo
       mothers_name,
       mothers_occupation,
       mothers_contact,
+      religion,
     } = req.body;
 
     // Validate required fields
@@ -236,6 +237,17 @@ export const createStudent = async (req: AuthRequest, res: Response): Promise<vo
       gender: gender ? gender.toLowerCase() : 'other',
       address: `${home_address || ''}, ${home_town || ''}, ${state_of_origin || ''}, ${country || ''}`.trim(),
       guardianId: guardianId || null,
+      // Parent/Guardian Details
+      fathersName: fathers_name || '',
+      fathersOccupation: fathers_occupation || '',
+      fathersContact: fathers_contact || '',
+      mothersName: mothers_name || '',
+      mothersOccupation: mothers_occupation || '',
+      mothersContact: mothers_contact || '',
+      homeTown: home_town || '',
+      stateOfOrigin: state_of_origin || '',
+      country: country || '',
+      religion: religion || '',
     });
     await student.save();
 
@@ -301,6 +313,13 @@ export const updateStudent = async (req: AuthRequest, res: Response): Promise<vo
       country,
       class: studentClass,
       guardian_email,
+      fathers_name,
+      fathers_occupation,
+      fathers_contact,
+      mothers_name,
+      mothers_occupation,
+      mothers_contact,
+      religion,
     } = req.body;
     
     const student = await Student.findById(id);
@@ -335,6 +354,17 @@ export const updateStudent = async (req: AuthRequest, res: Response): Promise<vo
     if (home_address || home_town || state_of_origin || country) {
       studentUpdates.address = `${home_address || ''}, ${home_town || ''}, ${state_of_origin || ''}, ${country || ''}`.trim();
     }
+    // Update parent/guardian details
+    if (fathers_name !== undefined) studentUpdates.fathersName = fathers_name;
+    if (fathers_occupation !== undefined) studentUpdates.fathersOccupation = fathers_occupation;
+    if (fathers_contact !== undefined) studentUpdates.fathersContact = fathers_contact;
+    if (mothers_name !== undefined) studentUpdates.mothersName = mothers_name;
+    if (mothers_occupation !== undefined) studentUpdates.mothersOccupation = mothers_occupation;
+    if (mothers_contact !== undefined) studentUpdates.mothersContact = mothers_contact;
+    if (home_town !== undefined) studentUpdates.homeTown = home_town;
+    if (state_of_origin !== undefined) studentUpdates.stateOfOrigin = state_of_origin;
+    if (country !== undefined) studentUpdates.country = country;
+    if (religion !== undefined) studentUpdates.religion = religion;
 
     // Find guardian if guardian_email is provided
     if (guardian_email) {

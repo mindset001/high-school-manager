@@ -42,7 +42,7 @@ const ResultNamesMobile: React.FC = () => {
     starter_pack: string;
     gender: string;
     age: number;
-    id: number;
+    id: string;
     image: string;
     full_name: string;
     class: string;
@@ -50,9 +50,9 @@ const ResultNamesMobile: React.FC = () => {
 
   interface StudentContext {
     toast: any;
-    studentID: number;
+    studentID: string | number;
     className : string;
-    setStudentID: (id: number) => void;
+    setStudentID: (id: string | number) => void;
     resultViewToggle: boolean;
     setResultViewToggle: React.Dispatch<React.SetStateAction<boolean>>;
     classStudentsIdData: AxiosResponse<any, any> | undefined;
@@ -84,6 +84,7 @@ const ResultNamesMobile: React.FC = () => {
         className={className}
         resultViewToggle={resultViewToggle}
         setResultViewToggle={setResultViewToggle}
+        totalStudentsInClass={studentData.length}
       />
       <div className="mt-[50px]">
         {isClassLoading || isClassStudentsIdLoading ? (
@@ -95,7 +96,7 @@ const ResultNamesMobile: React.FC = () => {
             <span>Error fetching data</span>
           </div>
         ) : classStudentsIdData &&
-          Array.isArray(classStudentsIdData.data.data) ? (
+          Array.isArray(classStudentsIdData.data.students) ? (
           studentData?.map((data, index) => (
             <Link
               to={"#"}

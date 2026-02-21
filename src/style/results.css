@@ -150,3 +150,10 @@ input[type="file"]::file-selector-button:hover {
 .tablebody-button button:last-child {
   @apply hover:invert;
 }
+
+/* Hide buttons during print */
+@media print {
+  .tablebody-button {
+    display: none !important;
+  }
+}

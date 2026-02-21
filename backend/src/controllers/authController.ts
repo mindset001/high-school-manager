@@ -48,21 +48,35 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
-    // Find user
-    const user = await User.findOne({ email });
+    console.log('Login attempt:', { email, password: password ? '[PROVIDED]' : '[MISSING]' });
+
+    // Find user (case insensitive email)
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
+      console.log('User not found with email:', email.toLowerCase());
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
 
+    console.log('User found:', { 
+      id: user._id, 
+      email: user.email, 
+      role: user.role, 
+      isActive: user.isActive,
+      hasPassword: !!user.password 
+    });
+
     // Check if user is active
     if (!user.isActive) {
+      console.log('User account is deactivated');
       res.status(403).json({ message: 'Account is deactivated' });
       return;
     }
 
     // Verify password
     const isMatch = await comparePassword(password, user.password);
+    console.log('Password match result:', isMatch);
+    
     if (!isMatch) {
       res.status(401).json({ message: 'Invalid credentials' });
       return;
@@ -82,6 +96,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     user.refreshToken = refreshToken;
     await user.save();
 
+    console.log('Login successful for user:', user.email);
+
     res.json({
       message: 'Login successful',
       accessToken,
@@ -96,6 +112,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error: any) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -104,17 +121,39 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
   try {
     const { token } = req.body;
 
+    console.log('Refresh token attempt:', { 
+      hasToken: !!token, 
+      tokenLength: token?.length || 0,
+      bodyKeys: Object.keys(req.body)
+    });
+
     if (!token) {
+      console.log('No refresh token provided');
       res.status(401).json({ message: 'Refresh token required' });
       return;
     }
 
     // Verify refresh token
+    console.log('Attempting to verify refresh token...');
     const decoded = verifyRefreshToken(token);
+    console.log('Token decoded successfully:', { userId: decoded.userId });
 
     // Find user and verify refresh token
     const user = await User.findById(decoded.userId);
-    if (!user || user.refreshToken !== token) {
+    if (!user) {
+      console.log('User not found for decoded token:', decoded.userId);
+      res.status(403).json({ message: 'Invalid refresh token' });
+      return;
+    }
+
+    console.log('User found, checking refresh token match:', {
+      storedTokenLength: user.refreshToken?.length || 0,
+      providedTokenLength: token.length,
+      hasStoredToken: !!user.refreshToken
+    });
+
+    if (user.refreshToken !== token) {
+      console.log('Refresh token mismatch - tokens do not match');
       res.status(403).json({ message: 'Invalid refresh token' });
       return;
     }
@@ -127,9 +166,11 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     };
 
     const accessToken = generateAccessToken(payload);
+    console.log('New access token generated for user:', user.email);
 
     res.json({ accessToken });
   } catch (error: any) {
+    console.error('Refresh token error:', error.message);
     res.status(403).json({ message: 'Invalid refresh token', error: error.message });
   }
 };
@@ -142,6 +183,47 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     await User.findByIdAndUpdate(userId, { refreshToken: null });
 
     res.json({ message: 'Logout successful' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const testCredentials = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      res.json({ 
+        success: false,
+        message: 'User not found with this email',
+        email: email
+      });
+      return;
+    }
+
+    // Check password match
+    const isMatch = await comparePassword(password, user.password);
+    
+    res.json({
+      success: isMatch,
+      message: isMatch ? 'Credentials are valid' : 'Password does not match',
+      user: {
+        id: user._id,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        isActive: user.isActive,
+        firstName: user.firstName,
+        lastName: user.lastName
+      },
+      passwordTest: {
+        inputPassword: password,
+        storedPasswordLength: user.password?.length || 0,
+        passwordMatches: isMatch
+      }
+    });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

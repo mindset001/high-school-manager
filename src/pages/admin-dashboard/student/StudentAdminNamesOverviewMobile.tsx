@@ -72,7 +72,7 @@ const StudentAdminNamesOverviewMobile: React.FC = () => {
           <span>Error fetching data</span>
         </div>
       ) : classStudentsIdData &&
-        Array.isArray(classStudentsIdData.data.data) ? (
+        Array.isArray(classStudentsIdData.data.students) ? (
         studentData?.map((data, index) => (
           <Link
             to={data.id.toString()}

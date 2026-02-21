@@ -53,12 +53,12 @@ const StudentAdminDatabase: React.FC = () => {
     total_tuition_paid: number;
   }
   interface studentDataInterface {
-    id: number;
+    id: string | number;
     // id: number;
     last_name: string;
     first_name: string;
     middle_name: string;
-    image: File | null;
+    image: string | File | null;
     student_class: string;
     schoolclass: number;
     date_of_birth: Date | null;
@@ -127,7 +127,7 @@ const StudentAdminDatabase: React.FC = () => {
     religion: "",
     starter_pack_collected: null,
   });
-  const [currentID, setCurrentID] = useState<number>(0);
+  const [currentID, setCurrentID] = useState<string | number>('');
 
   const filteredID = useMemo(() => {
     return (
@@ -187,7 +187,7 @@ const StudentAdminDatabase: React.FC = () => {
   const formatStudentData = (data: any): studentDataInterface => {
     // Backend returns { student: { userId: {...}, class, ... } }
     return {
-      id: data._id || 0,
+      id: data._id || '',
       last_name: data.userId?.lastName || "",
       first_name: data.userId?.firstName || "",
       middle_name: "",
@@ -196,18 +196,18 @@ const StudentAdminDatabase: React.FC = () => {
       schoolclass: 0,
       date_of_birth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
       gender: data.gender || "",
-      fathers_name: "",
-      fathers_occupation: "",
-      fathers_contact: data.userId?.phoneNumber || "",
-      mothers_name: "",
-      mothers_occupation: "",
-      mothers_contact: "",
+      fathers_name: data.fathersName || "",
+      fathers_occupation: data.fathersOccupation || "",
+      fathers_contact: data.fathersContact || data.userId?.phoneNumber || "",
+      mothers_name: data.mothersName || "",
+      mothers_occupation: data.mothersOccupation || "",
+      mothers_contact: data.mothersContact || "",
       home_address: data.address || "",
       guardian_email: data.guardianId?.userId?.email || "",
-      home_town: "",
-      state_of_origin: "",
-      country: "",
-      religion: "",
+      home_town: data.homeTown || "",
+      state_of_origin: data.stateOfOrigin || "",
+      country: data.country || "",
+      religion: data.religion || "",
       starter_pack_collected: null,
     };
   };
@@ -288,16 +288,12 @@ const StudentAdminDatabase: React.FC = () => {
   ////////////////////////////////////////////////////////
   // UPDATE QUERY
   const updateMutation = useMutation({
-    mutationFn: (variables: { id: number; updateData: object }) =>
+    mutationFn: (variables: { id: string | number; updateData: object }) =>
       updateStudent(variables),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["classStudents"] });
-      // alert("Student updated successfully!");
       contextToast.success("Student updated successfully!");
-      // console.log("Student updated successfully!");
       setEditable(false);
-
-      // setAddToggle(false); // Close the form after successful submission
     },
     onError: (error) => {
       console.error("Error updating student: ", error);
@@ -380,33 +376,60 @@ const StudentAdminDatabase: React.FC = () => {
     const data = new FormData();
     let hasChanges = false;
 
-    if (studentsIdData?.data?.data) {
-      const serverData = formatStudentData(studentsIdData.data.data);
+    console.log('=== handleSubmit Debug ===');
+    console.log('studentsIdData:', studentsIdData);
+    console.log('currentID:', currentID);
+    console.log('newStudentData:', newStudentData);
+
+    if (studentsIdData?.data?.student) {
+      const serverData = formatStudentData(studentsIdData.data.student);
+      console.log('serverData:', serverData);
 
       Object.entries(newStudentData).forEach(([key, value]) => {
         const serverValue = serverData[key as keyof studentDataInterface];
+        
+        // Map frontend field names to backend field names
+        let backendFieldName = key;
+        if (key === "student_class") backendFieldName = "class";
+        if (key === "schoolclass") return; // Skip this field
+        
         if (key === "image" && value instanceof File) {
-          data.append(key, value);
+          data.append(backendFieldName, value);
           hasChanges = true;
+          console.log(`Added image file to FormData`);
         } else if (key === "date_of_birth") {
           const newDate = value as Date | null;
           const serverDate = serverValue as Date | null;
           if (formatDate(newDate) !== formatDate(serverDate)) {
-            data.append(key, formatDate(newDate));
+            data.append(backendFieldName, formatDate(newDate));
             hasChanges = true;
+            console.log(`Changed ${key}: ${formatDate(serverDate)} -> ${formatDate(newDate)}`);
           }
-        } else if (value !== serverValue) {
-          data.append(key, value as string);
-
+        } else if (key === "id") {
+          // Skip id field
+          return;
+        } else if (value !== serverValue && value !== null && value !== undefined) {
+          data.append(backendFieldName, value as string);
           hasChanges = true;
+          console.log(`Changed ${key}: ${serverValue} -> ${value}`);
         }
       });
 
+      console.log('hasChanges:', hasChanges);
+      console.log('FormData contents:');
+      for (let pair of data.entries()) {
+        console.log(pair[0], pair[1]);
+      }
+
       if (hasChanges) {
+        console.log('Calling updateMutation with ID:', currentID);
         updateMutation.mutate({ id: currentID, updateData: data });
       } else {
-        alert("No changes detected. Update not necessary.");
+        contextToast.info("No changes detected.");
       }
+    } else {
+      console.error('studentsIdData.data.student is not available');
+      contextToast.error("Student data not loaded.");
     }
   };
   return (

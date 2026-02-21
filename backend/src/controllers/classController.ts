@@ -127,6 +127,55 @@ export const removeStudentFromClass = async (req: AuthRequest, res: Response): P
   }
 };
 
+export const addSubjectsToClass = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { subjects } = req.body;
+    
+    if (!Array.isArray(subjects)) {
+      res.status(400).json({ message: 'Subjects must be an array' });
+      return;
+    }
+    
+    const classData = await Class.findByIdAndUpdate(
+      id,
+      { $addToSet: { subjects: { $each: subjects } } },
+      { new: true }
+    );
+    
+    if (!classData) {
+      res.status(404).json({ message: 'Class not found' });
+      return;
+    }
+    
+    res.json({ message: 'Subjects added to class successfully', class: classData });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const removeSubjectFromClass = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { subject } = req.body;
+    
+    const classData = await Class.findByIdAndUpdate(
+      id,
+      { $pull: { subjects: subject } },
+      { new: true }
+    );
+    
+    if (!classData) {
+      res.status(404).json({ message: 'Class not found' });
+      return;
+    }
+    
+    res.json({ message: 'Subject removed from class successfully', class: classData });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 export const getStudentsByClass = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;

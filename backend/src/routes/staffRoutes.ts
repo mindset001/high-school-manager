@@ -6,6 +6,9 @@ import {
   updateStaff,
   deleteStaff,
   uploadStaffDocument,
+  resetStaffPasswordsToPhoneNumbers,
+  debugStaffLogin,
+  getStaffByClass,
 } from '../controllers/staffController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { upload } from '../config/multer.js';
@@ -16,6 +19,9 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', authorize('admin'), getAllStaff);
+router.post('/reset-passwords', authorize('admin'), resetStaffPasswordsToPhoneNumbers);
+router.get('/debug/:email', authorize('admin'), debugStaffLogin);
+router.get('/by-class/:className', authorize('admin', 'guardian'), getStaffByClass);
 router.get('/:id', authorize('admin', 'staff'), getStaffById);
 router.post('/', authorize('admin'), upload.single('image'), createStaff);
 router.put('/:id', authorize('admin'), upload.single('image'), updateStaff);

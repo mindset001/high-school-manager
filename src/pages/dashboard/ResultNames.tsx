@@ -37,7 +37,7 @@ const tableHeader: string[] = [
 ];
 
 interface classStudentIdI {
-  id: number;
+  id: string;
   student_class: string;
   guardian_email: string;
   first_name: string;
@@ -69,7 +69,7 @@ interface studentDataI {
   starter_pack: string;
   gender: string;
   age: number;
-  id: number;
+  id: string;
   image: string;
   full_name: string;
   class: string;
@@ -105,7 +105,7 @@ const ResultNames: React.FC = () => {
   const [optionsToggle, setOptionsToggle] = useState<boolean>(false);
   const [fileName, setFileName] = useState("No file selected");
   const [resultViewToggle, setResultViewToggle] = useState(false);
-  const [studentID, setStudentID] = useState(0);
+  const [studentID, setStudentID] = useState<string | number>("");
   // const [classes] = useState<string[]>([
   //   "creche",
   //   "k.g 1",
@@ -192,12 +192,41 @@ const ResultNames: React.FC = () => {
     if (
       !classStudentsIdData ||
       !classStudentsIdData.data ||
-      !Array.isArray(classStudentsIdData.data.data)
+      !Array.isArray(classStudentsIdData.data.students)
     ) {
       return [];
     }
-    return classStudentsIdData.data.data;
-  }, [classStudentsIdData]);
+    
+    // Map backend structure to frontend structure
+    const mappedStudents = classStudentsIdData.data.students.map((student: any) => ({
+      id: student._id || '',
+      student_class: student.class || className || '',
+      guardian_email: student.guardianId?.userId?.email || '',
+      first_name: student.userId?.firstName || '',
+      last_name: student.userId?.lastName || '',
+      middle_name: '',
+      image: student.userId?.profileImage || '',
+      date_of_birth: student.dateOfBirth || '',
+      gender: student.gender || '',
+      fathers_name: student.fathersName || '',
+      mothers_name: student.mothersName || '',
+      fathers_contact: student.fathersContact || student.userId?.phoneNumber || '',
+      mothers_contact: student.mothersContact || '',
+      fathers_occupation: student.fathersOccupation || '',
+      mothers_occupation: student.mothersOccupation || '',
+      home_address: student.address || '',
+      state_of_origin: student.stateOfOrigin || '',
+      home_town: student.homeTown || '',
+      country: student.country || '',
+      starter_pack_collected: student.starterPackCollected || false,
+      religion: student.religion || '',
+      total_tuition_paid: 0,
+      schoolclass: 0,
+      guardian: 0,
+    }));
+    
+    return mappedStudents;
+  }, [classStudentsIdData, className]);
 
   const filteredClassStudentId: studentDataI[] = useMemo(() => {
     return classStudentsId.map((student) => ({
@@ -239,6 +268,7 @@ const ResultNames: React.FC = () => {
         className={className}
         resultViewToggle={resultViewToggle}
         setResultViewToggle={setResultViewToggle}
+        totalStudentsInClass={studentData.length}
       />
       <FilePreview
         filePreview={filePreview}
@@ -437,7 +467,7 @@ const ResultNames: React.FC = () => {
                       </tr>
                     </tbody>
                   ) : classStudentsIdData &&
-                    Array.isArray(classStudentsIdData.data.data) ? (
+                    Array.isArray(classStudentsIdData.data.students) ? (
                     <tbody>
                       {studentData?.map((data, index) => (
                         <tr

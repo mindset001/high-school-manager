@@ -13,9 +13,7 @@ export const getClass = () => {
 };
 
 export const getSubjects = () => {
-  // Placeholder - subjects not yet implemented
-  // Return empty array to prevent errors
-  return Promise.resolve({ data: { data: [] } });
+  return apiClient.get(`subjects/`);
 };
 
 export const getClassStudentsId = (id: number) => {
@@ -56,10 +54,13 @@ export const getGuardianWard = () => {
   return apiClient.get(`guardians/wards`);
 };
 
+export const getGuardianProfile = () => {
+  return apiClient.get(`guardians/profile/me`);
+};
 
-export const getClassStudentResult = ( id : number) => {
-  // Placeholder - student results not yet implemented
-  return Promise.resolve({ data: { data: [] } });
+
+export const getClassStudentResult = ( id : number | string) => {
+  return apiClient.get(`students/${id}/results`);
 };
 
 ////////////////////////////
@@ -74,12 +75,26 @@ export const getStaff = () => {
   return apiClient.get(`staff/${user.id}`);
 };
 
+export const getStaffByClass = (className: string) => {
+  return apiClient.get(`staff/by-class/${encodeURIComponent(className)}`);
+};
+
 export const getCalender = () => {
-  // Placeholder - calendar not yet implemented
-  return Promise.resolve({ data: { data: [] } });
+  return apiClient.get(`calender/`);
 };
 
 export const getAllTimetables = () => {
   // Placeholder - timetables not yet implemented
   return Promise.resolve({ data: { data: [] } });
+};
+export const getAllPayments = () => {
+  return apiClient.get(`payments/`);
+};
+
+export const getPaymentsByStudent = (studentId: string | number) => {
+  return apiClient.get(`payments/student/${studentId}`);
+};
+
+export const getPaymentsByClass = (classId: string | number) => {
+  return apiClient.get(`payments/class/${classId}`);
 };

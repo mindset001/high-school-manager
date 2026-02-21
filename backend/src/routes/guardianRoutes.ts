@@ -7,6 +7,7 @@ import {
   deleteGuardian,
   getGuardianWards,
   getGuardianWardById,
+  getGuardianProfile,
 } from '../controllers/guardianController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
@@ -19,6 +20,7 @@ router.use(authenticate);
 router.get('/ward', authorize('guardian'), getGuardianWards);
 router.get('/wards', authorize('guardian'), getGuardianWards);
 router.get('/ward/:id', authorize('guardian'), getGuardianWardById);
+router.get('/profile/me', authorize('guardian'), getGuardianProfile);
 
 // General guardian routes
 router.get('/', authorize('admin', 'staff'), getAllGuardians);

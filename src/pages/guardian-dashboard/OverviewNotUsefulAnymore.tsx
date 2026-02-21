@@ -195,12 +195,41 @@ const ResultNames: React.FC = () => {
     if (
       !classStudentsIdData ||
       !classStudentsIdData.data ||
-      !Array.isArray(classStudentsIdData.data.data)
+      !Array.isArray(classStudentsIdData.data.students)
     ) {
       return [];
     }
-    return classStudentsIdData.data.data;
-  }, [classStudentsIdData]);
+    
+    // Map backend structure to frontend structure
+    const mappedStudents = classStudentsIdData.data.students.map((student: any) => ({
+      id: student._id || '',
+      student_class: student.class || className || '',
+      guardian_email: student.guardianId?.userId?.email || '',
+      first_name: student.userId?.firstName || '',
+      last_name: student.userId?.lastName || '',
+      middle_name: '',
+      image: student.userId?.profileImage || '',
+      date_of_birth: student.dateOfBirth || '',
+      gender: student.gender || '',
+      fathers_name: student.fathersName || '',
+      mothers_name: student.mothersName || '',
+      fathers_contact: student.fathersContact || student.userId?.phoneNumber || '',
+      mothers_contact: student.mothersContact || '',
+      fathers_occupation: student.fathersOccupation || '',
+      mothers_occupation: student.mothersOccupation || '',
+      home_address: student.address || '',
+      state_of_origin: student.stateOfOrigin || '',
+      home_town: student.homeTown || '',
+      country: student.country || '',
+      starter_pack_collected: student.starterPackCollected || false,
+      religion: student.religion || '',
+      total_tuition_paid: 0,
+      schoolclass: 0,
+      guardian: 0,
+    }));
+    
+    return mappedStudents;
+  }, [classStudentsIdData, className]);
 
   const filteredClassStudentId: studentDataI[] = useMemo(() => {
     return classStudentsId.map((student) => ({
@@ -449,7 +478,7 @@ const ResultNames: React.FC = () => {
                       </tr>
                     </tbody>
                   ) : classStudentsIdData &&
-                    Array.isArray(classStudentsIdData.data.data) ? (
+                    Array.isArray(classStudentsIdData.data.students) ? (
                     <tbody>
                       {studentData?.map((data, index) => (
                         <tr

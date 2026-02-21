@@ -181,12 +181,12 @@ const StaffLogin: React.FC = () => {
       role: role as string,
     };
     mutate(userDetails, {
-      onSuccess: (response: { data: { data: any } }) => {
-        const userdata = response.data.data;
+      onSuccess: (response: { data: any }) => {
+        const userdata = response.data;
         if (userdata) {
           saveTokens(userdata.accessToken, userdata.refreshToken);
-          setRole(userdata.userData.role);
-          setuser(userdata.userData);
+          setRole(userdata.user.role);
+          setuser(userdata.user);
           navigate("/dashboard"); // Navigate after successful login
         }
         setLoading(false);

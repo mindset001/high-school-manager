@@ -252,65 +252,73 @@ const StudentAdminOverview: React.FC = () => {
                         <div>TOTAL</div>
                         <div>{classTuitionPercent.total}</div>
                       </div>
-                      <div className="flex flex-row justify-between">
-                        <div>
-                          <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                            COMPLETED
+                      {classTuitionPercent.total === 0 ? (
+                        <div className="text-center font-Poppins text-sm text-gray-500 py-4">
+                          No students in this class yet.
+                          <br />
+                          <span className="text-xs">Add students to see payment statistics.</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-row justify-between">
+                          <div>
+                            <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                              COMPLETED
+                            </div>
+                            <div className="font-Poppins">
+                              <CircularProgressBar
+                                style={{
+                                  percentage: classTuitionPercent.completed,
+                                  textSize: 9.21,
+                                  textColor: "rgba(41,204,151,1)",
+                                  fontWeight: 600,
+                                  pathColor: "rgba(41,204,151,1)",
+                                  trailColor: "rgba(234,250,245)",
+                                  weight: 7,
+                                  size: 61.39,
+                                }}
+                              />
+                            </div>
                           </div>
-                          <div className="font-Poppins">
-                            <CircularProgressBar
-                              style={{
-                                percentage: classTuitionPercent.completed,
-                                textSize: 9.21,
-                                textColor: "rgba(41,204,151,1)",
-                                fontWeight: 600,
-                                pathColor: "rgba(41,204,151,1)",
-                                trailColor: "rgba(234,250,245)",
-                                weight: 7,
-                                size: 61.39,
-                              }}
-                            />
+                          <div className="mx-[30px]">
+                            <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                              INCOMPLETE
+                            </div>
+                            <div className="font-Poppins">
+                              <CircularProgressBar
+                                style={{
+                                  percentage: classTuitionPercent.incomplete,
+                                  textSize: 9.21,
+                                  textColor: "#98654F",
+                                  fontWeight: 600,
+                                  pathColor: "#98654F",
+                                  trailColor: "#F5F0ED",
+                                  weight: 7,
+                                  size: 61.39,
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                              VOID
+                            </div>
+                            <div className="font-Poppins">
+                              <CircularProgressBar
+                                style={{
+                                  percentage: classTuitionPercent.void,
+                                  textSize: 9.21,
+                                  textColor: "#FF2E2E",
+                                  fontWeight: 600,
+                                  pathColor: "#FF2E2E",
+                                  trailColor: "#FFEAEA",
+                                  weight: 7,
+                                  size: 61.39,
+                                }}
+                              />
+                            </div>
                           </div>
                         </div>
-                        <div className="mx-[30px]">
-                          <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                            INCOMPLETE
-                          </div>
-                          <div className="font-Poppins">
-                            <CircularProgressBar
-                              style={{
-                                percentage: classTuitionPercent.incomplete,
-                                textSize: 9.21,
-                                textColor: "#98654F",
-                                fontWeight: 600,
-                                pathColor: "#98654F",
-                                trailColor: "#F5F0ED",
-                                weight: 7,
-                                size: 61.39,
-                              }}
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                            VOID
-                          </div>
-                          <div className="font-Poppins">
-                            <CircularProgressBar
-                              style={{
-                                percentage: classTuitionPercent.void,
-                                textSize: 9.21,
-                                textColor: "#FF2E2E",
-                                fontWeight: 600,
-                                pathColor: "#FF2E2E",
-                                trailColor: "#FFEAEA",
-                                weight: 7,
-                                size: 61.39,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
+                      )}
                       <Link
                         to={classdata.name.toLowerCase()}
                         className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"

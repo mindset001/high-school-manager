@@ -43,3 +43,10 @@ export const uploadResult = (resultFile: object) => {
     },
   });
 };
+export const createPayment = (paymentData: object) => {
+  return apiClient.post(`/payments/`, paymentData);
+};
+
+export const createSubject = (subjectData: object) => {
+  return apiClient.post(`/subjects/`, subjectData);
+};

@@ -30,6 +30,7 @@ interface HomeAnalyticDataInterface {
   total_students: number;
   total_staffs: number;
   total_subject: number;
+  total_classes: number;
   completed_tuition: number;
   void: number;
   incompleted_tuition: number;
@@ -46,6 +47,7 @@ const Overview: React.FC = () => {
     totalStudents: 0,
     totalStaffs: 0,
     totalSubjects: 0,
+    totalClasses: 0,
   });
 
   const {
@@ -81,6 +83,7 @@ const Overview: React.FC = () => {
     total_students = 0,
     total_staffs = 0,
     total_subject = 0,
+    total_classes = 0,
   } = homeAnalytic;
 
   // const { events = [] } = homeAnalytic;
@@ -104,13 +107,15 @@ const Overview: React.FC = () => {
     if (
       typeof total_students === "number" &&
       typeof total_staffs === "number" &&
-      typeof total_subject === "number"
+      typeof total_subject === "number" &&
+      typeof total_classes === "number"
       // events.length > 0
     ) {
       setTotalSSS({
         totalStudents: total_students,
         totalStaffs: total_staffs,
         totalSubjects: total_subject,
+        totalClasses: total_classes,
       });
 
       // console.log("Hmmmm", stringToday);
@@ -121,7 +126,7 @@ const Overview: React.FC = () => {
 
       // setCalendarEvents(filterToUpcoming);
     }
-  }, [total_students, total_staffs, total_subject]);
+  }, [total_students, total_staffs, total_subject, total_classes]);
 
   console.log(
     "Home Analytics Total:",
@@ -161,7 +166,7 @@ const Overview: React.FC = () => {
         </div>
         <div className="absolute bottom-[-22px] right-[15.22%] left-[15.22%] bg-[#FFFF] flex flex-row justify-between items-center font-Poppins py-[8px] px-[14px] ml:px-[16px] rounded-[20px] shadow-[0px_8px_26px_0px_rgba(4,_106,_126,_0.17)]">
           <div className="text-[13px] ml:text-[15px] text-center leading-[22.5px] font-medium 2xl:font-bold mr-[11px] text-[#05878F]">
-            2024/2025 Acad<span className="hidden ml:inline">emic</span> Session
+            2026/2027 Acad<span className="hidden ml:inline">emic</span> Session
           </div>
           <div className="max-w-[13px] max-h-[13px] ml:max-w-[15px] ml:max-h-[15px]">
             <img
@@ -209,11 +214,11 @@ const Overview: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="overview-total-students mr-[0px] md:mr-[15px] lg:mr-[20px] xl:mr-[25px] 2xl:mr-[30px] bg-[#C7D4FF]">
+            <div className="overview-total-students mr-[15px] md:mr-[10px] lg:mr-[15px] xl:mr-[20px] 2xl:mr-[25px] bg-[#C7D4FF]">
               <div className="bg-transparent md:bg-white p-0 md:p-[10.69px] mb-[20px] md:mb-0  mr-0 md:mr-[10.29px] rounded-full">
                 <img
                   src={TotalSubjects}
-                  alt="Total Students"
+                  alt="Total Subjects"
                   className="max-w-[45px] md:max-w-[34.36px] h-auto object-center object-contain"
                 />
               </div>
@@ -223,6 +228,23 @@ const Overview: React.FC = () => {
                 </div>
                 <div className="font-bold font-Lora text-[28px] leading-[35.84px] md:text-[22.3px] md:leading-[28.54px] text-black md:text-[#2C4084]">
                   {totalSSS.totalSubjects}
+                </div>
+              </div>
+            </div>
+            <div className="overview-total-students mr-[0px] md:mr-[15px] lg:mr-[20px] xl:mr-[25px] 2xl:mr-[30px] bg-[#FFE4C7]">
+              <div className="bg-transparent md:bg-white p-0 md:p-[10.69px] mb-[20px] md:mb-0  mr-0 md:mr-[10.29px] rounded-full">
+                <img
+                  src={TotalSubjects}
+                  alt="Total Classes"
+                  className="max-w-[45px] md:max-w-[34.36px] h-auto object-center object-contain"
+                />
+              </div>
+              <div className="text-center md:text-left">
+                <div className="font-Poppins text-[15px] leading-[22.5px] md:text-[12px] md:leading-[18px] font-medium mb-[10px] md:mb-[4.29px]">
+                  Total Classes
+                </div>
+                <div className="font-bold font-Lora text-[28px] leading-[35.84px] md:text-[22.3px] md:leading-[28.54px] text-black md:text-[#FF6B27]">
+                  {totalSSS.totalClasses}
                 </div>
               </div>
             </div>

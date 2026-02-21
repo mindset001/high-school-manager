@@ -28,14 +28,17 @@ const Calendar: React.FC = () => {
   const calender: {
     event: string;
     date: string;
-    id: number;
+    id: string;
   }[] = useMemo(
     () =>
       (data &&
+        data.data.data &&
+        Array.isArray(data.data.data) &&
         data.data.data.map(
-          (event: { event: string; date: string; id: number }) => ({
-            ...event,
+          (event: { event: string; date: string; _id: string }) => ({
+            event: event.event,
             date: formatDate(event.date), // Format the date string
+            id: event._id,
           })
         )) ||
       [],
@@ -143,7 +146,7 @@ const Calendar: React.FC = () => {
   //DELETE REQUEST
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteEvent(id),
+    mutationFn: (id: string | number) => deleteEvent(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calender"] });
       showSuccessToast("Event deleted successfully!");

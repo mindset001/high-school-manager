@@ -96,41 +96,16 @@ const StaffLogin: React.FC = () => {
       value: string;
     };
   }): void => {
-    const isNotSpecialChar = !specialCharRegex.test(e.target.value);
     const isEmpty = e.target.value.trim() == "" || !e.target.value;
-    const isSpaced = e.target.value.split(" ").length >= 2;
-    const isShort = e.target.value.length <= 7;
-    const isCommon = commonPasswords.includes(e.target.value.toLowerCase());
-    const hasNotCapitalLetter = !/[A-Z]/.test(e.target.value);
-    const hasNotSmallLetter = !/[a-z]/.test(e.target.value);
-    const hasNotNumber = !/[0-9]/.test(e.target.value);
+    const isShort = e.target.value.length < 8;
 
-    isEmpty ||
-    isSpaced ||
-    isShort ||
-    isCommon ||
-    hasNotCapitalLetter ||
-    hasNotSmallLetter ||
-    hasNotNumber ||
-    isNotSpecialChar
+    isEmpty || isShort
       ? (setTogglePasswordError(true),
         setPasswordErrorMessage(
-          isSpaced
-            ? "Password can't contain spaces"
-            : isEmpty
+          isEmpty
             ? "This field is required"
             : isShort
-            ? "Password is too short"
-            : isCommon
-            ? "Password is too common. Please change it"
-            : hasNotCapitalLetter
-            ? "Provide atleast one uppercase letter"
-            : hasNotSmallLetter
-            ? "Provide atleast one lowercase letter"
-            : hasNotNumber
-            ? "Password requires atleast one digit"
-            : isNotSpecialChar
-            ? "Atleast one special character is required"
+            ? "Password must be at least 8 characters"
             : ""
         ))
       : (setTogglePasswordError(false), setPasswordErrorMessage(""));
@@ -181,12 +156,12 @@ const StaffLogin: React.FC = () => {
       role: role as string,
     };
     mutate(userDetails, {
-      onSuccess: (response: { data: { data: any } }) => {
-        const userdata = response.data.data;
+      onSuccess: (response: { data: any }) => {
+        const userdata = response.data;
         if (userdata) {
           saveTokens(userdata.accessToken, userdata.refreshToken);
-          setRole(userdata.userData.role);
-          setuser(userdata.userData);
+          setRole(userdata.user.role);
+          setuser(userdata.user);
           navigate("/dashboard"); // Navigate after successful login
         }
         setLoading(false);

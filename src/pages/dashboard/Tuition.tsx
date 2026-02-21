@@ -12,12 +12,14 @@ import TuitionFinance from "../../components/admin-dashboard/TuitionFinance";
 import { Link, useNavigate } from "react-router-dom";
 import CircularProgressBar from "../../components/dashboard/CircularProgressBar";
 import GuardianSVG from "../../components/svg/GuardianSVG";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 // import { getClassStat } from "../../services/api/calls/getClassStat";
 import Loader from "../../shared/Loader";
 // import { getBaseClass } from "../../services/api/calls/getBaseClass";
 import { baseClassInterface } from "../../types/user.type";
 import { getBaseClass, getClassStat } from "../../services/api/calls/getApis";
+import { updateClass } from "../../services/api/calls/updateApis";
+import ToastNotification, { showSuccessToast, showErrorToast } from "../../shared/ToastNotification";
 
 const classStatsTableHeader: string[] = [
   "Class",
@@ -59,14 +61,25 @@ const Tuition: React.FC = () => {
   // }, [baseClassData]);
 
   const baseClass: baseClassInterface[] = useMemo(() => {
-    if (
-      !baseClassData ||
-      !baseClassData.data ||
-      !Array.isArray(baseClassData.data.data)
-    ) {
+    console.log('=== BaseClass Data Debug ===');
+    console.log('Raw baseClassData:', baseClassData);
+    
+    if (!baseClassData || !baseClassData.data) {
+      console.log('No baseClassData or baseClassData.data');
       return [];
     }
-    return baseClassData.data.data;
+    
+    // Backend returns { classes: [...] }, not { data: [...] }
+    const classes = baseClassData.data.classes;
+    console.log('Extracted classes:', classes);
+    
+    if (!Array.isArray(classes)) {
+      console.log('Classes is not an array');
+      return [];
+    }
+    
+    console.log('Returning classes array with length:', classes.length);
+    return classes;
   }, [baseClassData]);
   useEffect(() => {
     // console.log(
@@ -118,6 +131,41 @@ const Tuition: React.FC = () => {
   //   isClassStatLoading
   // );
   isClassStatError && console.error(classStatError);
+
+  // Helper function to get class stats by class name
+  const getClassStats = (className: string) => {
+    const normalizedName = className.toLowerCase();
+    const stats = classStats.find(
+      (stat) => stat.class?.toLowerCase() === normalizedName
+    );
+    
+    if (!stats || !stats.total || stats.total === 0) {
+      return {
+        total: 0,
+        completed: 0,
+        incomplete: 0,
+        void: 0,
+        completedPercent: 0,
+        incompletePercent: 0,
+        voidPercent: 0,
+      };
+    }
+    
+    const completed = stats.paid || 0;
+    const incomplete = stats.paid_half || 0;
+    const void_count = stats.paid_nothing || 0;
+    const total = stats.total || 0;
+    
+    return {
+      total,
+      completed,
+      incomplete,
+      void: void_count,
+      completedPercent: Math.round((completed / total) * 100),
+      incompletePercent: Math.round((incomplete / total) * 100),
+      voidPercent: Math.round((void_count / total) * 100),
+    };
+  };
 
   // Student fees from classes to students
   const [studentDropDown, setStudentDropDown] = useState<string>("");
@@ -174,6 +222,26 @@ const Tuition: React.FC = () => {
     }
   }, [capitalizedClassName]);
   const [tuitionFeesDropDown, setTuitionFeesDropDown] = useState<boolean>(true);
+  
+  // Edit mode state
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [editFormData, setEditFormData] = useState<any>({});
+  
+  const queryClient = useQueryClient();
+  
+  // Mutation for updating class tuition fees
+  const updateClassMutation = useMutation({
+    mutationFn: updateClass,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['BaseClass'] });
+      setIsEditMode(false);
+      showSuccessToast('Tuition fees updated successfully!');
+    },
+    onError: (error: any) => {
+      console.error('Error updating class:', error);
+      showErrorToast('Failed to update tuition fees');
+    },
+  });
 
   // const currentClassFees =
   //   classTuitionFees[
@@ -184,10 +252,24 @@ const Tuition: React.FC = () => {
   const currentClassFees: baseClassInterface[] = useMemo(() => {
     if (!ActiveClass.classNow || !baseClass) return [];
 
-    return baseClass.filter(
+    const matchedClasses = baseClass.filter(
       (baseclass) =>
         baseclass.name?.toLowerCase() === ActiveClass.classNow.toLowerCase()
     );
+    
+    // Map backend camelCase fields to frontend snake_case
+    return matchedClasses.map((cls: any) => ({
+      ...cls,
+      id: cls._id || cls.id,
+      school_fee: cls.schoolFee || 0,
+      sport_wear: cls.sportWear || 0,
+      school_bus: cls.schoolBus || 0,
+      library_fee: cls.libraryFee || 0,
+      extra_activities: cls.extraActivities || 0,
+      // Calculate totals
+      total_starterpack: (cls.uniform || 0) + (cls.sportWear || 0) + (cls.schoolBus || 0) + (cls.snack || 0),
+      total_others: (cls.science || 0) + (cls.games || 0) + (cls.libraryFee || 0) + (cls.extraActivities || 0),
+    }));
   }, [ActiveClass.classNow, baseClass]);
 
   // console.log("Current Class Feess : ", currentClassFees[0]);
@@ -197,6 +279,66 @@ const Tuition: React.FC = () => {
       currentClassFees.length > 0 &&
       setClassFee(currentClassFees[0]);
   }, [currentClassFees]);
+  
+  // Initialize edit form when classFee changes
+  useEffect(() => {
+    if (classFee && classFee.id) {
+      setEditFormData({
+        schoolFee: classFee.school_fee || 0,
+        uniform: classFee.uniform || 0,
+        sportWear: classFee.sport_wear || 0,
+        schoolBus: classFee.school_bus || 0,
+        snack: classFee.snack || 0,
+        science: classFee.science || 0,
+        games: classFee.games || 0,
+        libraryFee: classFee.library_fee || 0,
+        extraActivities: classFee.extra_activities || 0,
+        starterPack: classFee.starterPack || 0,
+      });
+    }
+  }, [classFee]);
+  
+  const handleEditClick = () => {
+    setIsEditMode(true);
+  };
+  
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    // Reset form data
+    setEditFormData({
+      schoolFee: classFee.school_fee || 0,
+      uniform: classFee.uniform || 0,
+      sportWear: classFee.sport_wear || 0,
+      schoolBus: classFee.school_bus || 0,
+      snack: classFee.snack || 0,
+      science: classFee.science || 0,
+      games: classFee.games || 0,
+      libraryFee: classFee.library_fee || 0,
+      extraActivities: classFee.extra_activities || 0,
+      starterPack: classFee.starterPack || 0,
+    });
+  };
+  
+  const handleSaveEdit = () => {
+    if (!classFee.id) {
+      showErrorToast('No class selected');
+      return;
+    }
+    
+    updateClassMutation.mutate({
+      id: classFee.id,
+      updateData: editFormData,
+    });
+  };
+  
+  const handleInputChange = (field: string, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setEditFormData((prev: any) => ({
+      ...prev,
+      [field]: numValue,
+    }));
+  };
+  
   // console.log(currentClassFees);
   // if (isClassStatLoading) {
   //   return <Loader />;
@@ -351,9 +493,47 @@ const Tuition: React.FC = () => {
                   </div>
                 ) : (
                   <>
+                    {/* Edit/Save/Cancel buttons */}
+                    <div className="flex justify-end mb-4 gap-2">
+                      {!isEditMode ? (
+                        <button
+                          onClick={handleEditClick}
+                          className="flex items-center gap-2 px-4 py-2 bg-[#05878F] text-white rounded-lg font-Poppins text-sm hover:bg-[#046970] transition-colors"
+                        >
+                          <img src={Pencil} alt="edit" className="w-4 h-4" />
+                          Edit Fees
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-Poppins text-sm hover:bg-gray-400 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSaveEdit}
+                            disabled={updateClassMutation.isPending}
+                            className="px-4 py-2 bg-[#05878F] text-white rounded-lg font-Poppins text-sm hover:bg-[#046970] transition-colors disabled:opacity-50"
+                          >
+                            {updateClassMutation.isPending ? 'Saving...' : 'Save Changes'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    
                     <div className="fees-entries mb-[20px] font-Poppins text-[15px] font-medium xl:font-normal leading-[22.5px] md:leading-[16.5px]">
                       <div>School Fees:</div>
-                      <div>₦{classFee.school_fee}</div>
+                      {isEditMode ? (
+                        <input
+                          type="number"
+                          value={editFormData.schoolFee || 0}
+                          onChange={(e) => handleInputChange('schoolFee', e.target.value)}
+                          className="border border-gray-300 rounded px-2 py-1 w-32 text-right"
+                        />
+                      ) : (
+                        <div>₦{classFee.school_fee}</div>
+                      )}
                     </div>
                     <div className="mb-[20px]">
                       <div className="mb-[10px] font-Lora font-bold leading-[19.2px] xl:font-Poppins xl:font-semibold text-[17px] xl:leading-[19.5px]">
@@ -362,19 +542,55 @@ const Tuition: React.FC = () => {
                       <div>
                         <div className="fees-entries mb-[10px] md:mb-[15px] font-Poppins text-[15px] font-medium xl:font-normal leading-[22.5px] md:leading-[16.5px]">
                           <div>School Uniform :</div>
-                          <div>₦{classFee.uniform}</div>
+                          {isEditMode ? (
+                            <input
+                              type="number"
+                              value={editFormData.uniform || 0}
+                              onChange={(e) => handleInputChange('uniform', e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1 w-32 text-right"
+                            />
+                          ) : (
+                            <div>₦{classFee.uniform}</div>
+                          )}
                         </div>
                         <div className="fees-entries mb-[10px] md:mb-[15px] font-Poppins text-[15px] font-medium xl:font-normal leading-[22.5px] md:leading-[16.5px]">
                           <div>Sport Wear :</div>
-                          <div>₦{classFee.sport_wear}</div>
+                          {isEditMode ? (
+                            <input
+                              type="number"
+                              value={editFormData.sportWear || 0}
+                              onChange={(e) => handleInputChange('sportWear', e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1 w-32 text-right"
+                            />
+                          ) : (
+                            <div>₦{classFee.sport_wear}</div>
+                          )}
                         </div>
                         <div className="fees-entries mb-[10px] md:mb-[15px] font-Poppins text-[15px] font-medium xl:font-normal leading-[22.5px] md:leading-[16.5px]">
                           <div>School Bus :</div>
-                          <div>₦{classFee.school_bus}</div>
+                          {isEditMode ? (
+                            <input
+                              type="number"
+                              value={editFormData.schoolBus || 0}
+                              onChange={(e) => handleInputChange('schoolBus', e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1 w-32 text-right"
+                            />
+                          ) : (
+                            <div>₦{classFee.school_bus}</div>
+                          )}
                         </div>
                         <div className="fees-entries mb-[10px] md:mb-[15px] font-Poppins text-[15px] font-medium xl:font-normal leading-[22.5px] md:leading-[16.5px]">
                           <div>Snacks :</div>
-                          <div>₦{classFee.snack}</div>
+                          {isEditMode ? (
+                            <input
+                              type="number"
+                              value={editFormData.snack || 0}
+                              onChange={(e) => handleInputChange('snack', e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1 w-32 text-right"
+                            />
+                          ) : (
+                            <div>₦{classFee.snack}</div>
+                          )}
                         </div>
                       </div>
                       <div className="fees-entries mb-[10px] md:mb-[15px] font-Lora text-[15px] font-bold leading-[19.2px] xl:font-Poppins xl:font-semibold xl:leading-[16.5px]">
@@ -389,19 +605,55 @@ const Tuition: React.FC = () => {
                       <div>
                         <div className="fees-entries mb-[10px] md:mb-[15px] font-Poppins text-[15px] font-medium xl:font-normal leading-[22.5px] md:leading-[16.5px]">
                           <div>Science :</div>
-                          <div>₦{classFee.science}</div>
+                          {isEditMode ? (
+                            <input
+                              type="number"
+                              value={editFormData.science || 0}
+                              onChange={(e) => handleInputChange('science', e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1 w-32 text-right"
+                            />
+                          ) : (
+                            <div>₦{classFee.science}</div>
+                          )}
                         </div>
                         <div className="fees-entries mb-[10px] md:mb-[15px] font-Poppins text-[15px] font-medium xl:font-normal leading-[22.5px] md:leading-[16.5px]">
                           <div>Games :</div>
-                          <div>₦{classFee.games}</div>
+                          {isEditMode ? (
+                            <input
+                              type="number"
+                              value={editFormData.games || 0}
+                              onChange={(e) => handleInputChange('games', e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1 w-32 text-right"
+                            />
+                          ) : (
+                            <div>₦{classFee.games}</div>
+                          )}
                         </div>
                         <div className="fees-entries mb-[10px] md:mb-[15px] font-Poppins text-[15px] font-medium xl:font-normal leading-[22.5px] md:leading-[16.5px]">
                           <div>Library Fee :</div>
-                          <div>₦{classFee.library_fee}</div>
+                          {isEditMode ? (
+                            <input
+                              type="number"
+                              value={editFormData.libraryFee || 0}
+                              onChange={(e) => handleInputChange('libraryFee', e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1 w-32 text-right"
+                            />
+                          ) : (
+                            <div>₦{classFee.library_fee}</div>
+                          )}
                         </div>
                         <div className="fees-entries mb-[10px] md:mb-[15px] font-Poppins text-[15px] font-medium xl:font-normal leading-[22.5px] md:leading-[16.5px]">
                           <div>Extra Activities :</div>
-                          <div>₦{classFee.extra_activities}</div>
+                          {isEditMode ? (
+                            <input
+                              type="number"
+                              value={editFormData.extraActivities || 0}
+                              onChange={(e) => handleInputChange('extraActivities', e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1 w-32 text-right"
+                            />
+                          ) : (
+                            <div>₦{classFee.extra_activities}</div>
+                          )}
                         </div>
                       </div>
                       <div className="fees-entries mb-[10px] md:mb-[15px] font-Lora text-[15px] font-bold leading-[19.2px] xl:font-Poppins xl:font-semibold xl:leading-[16.5px]">
@@ -550,69 +802,76 @@ const Tuition: React.FC = () => {
                 studentDropDown === "Crèche" ? "hidden md:block" : "hidden"
               }`}
             >
-              <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
-                <div>TOTAL</div>
-                <div>25</div>
-              </div>
-              <div className="flex flex-row justify-between">
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mx-[30px]">
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const stats = getClassStats("Crèche");
+                return (
+                  <>
+                    <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
+                      <div>TOTAL</div>
+                      <div>{stats.total}</div>
+                    </div>
+                    <div className="flex flex-row justify-between">
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                          COMPLETED
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.completedPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(41,204,151,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(41,204,151,1)",
+                              trailColor: "rgba(234,250,245)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="mx-[30px]">
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#FFA412]">
+                          INCOMPLETE
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.incompletePercent,
+                              textSize: 9.21,
+                              textColor: "rgba(255,164,18,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(255,164,18,1)",
+                              trailColor: "rgba(255,248,236)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#F23645]">
+                          VOID
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.voidPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(242,54,69,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(242,54,69,1)",
+                              trailColor: "rgba(254,235,236)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
               <Link
                 to={"creche"}
                 className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"
@@ -668,69 +927,76 @@ const Tuition: React.FC = () => {
                 studentDropDown === "K.G 1" ? "hidden md:block" : "hidden"
               }`}
             >
-              <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
-                <div>TOTAL</div>
-                <div>25</div>
-              </div>
-              <div className="flex flex-row justify-between">
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mx-[30px]">
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const stats = getClassStats("K.G 1");
+                return (
+                  <>
+                    <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
+                      <div>TOTAL</div>
+                      <div>{stats.total}</div>
+                    </div>
+                    <div className="flex flex-row justify-between">
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                          COMPLETED
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.completedPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(41,204,151,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(41,204,151,1)",
+                              trailColor: "rgba(234,250,245)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="mx-[30px]">
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#FFA412]">
+                          INCOMPLETE
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.incompletePercent,
+                              textSize: 9.21,
+                              textColor: "rgba(255,164,18,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(255,164,18,1)",
+                              trailColor: "rgba(255,250,235)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#F23645]">
+                          VOID
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.voidPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(242,54,69,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(242,54,69,1)",
+                              trailColor: "rgba(254,235,236)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
               <Link
                 to={"k.g 1"}
                 className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"
@@ -786,69 +1052,76 @@ const Tuition: React.FC = () => {
                 studentDropDown === "K.G 2" ? "hidden md:block" : "hidden"
               }`}
             >
-              <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
-                <div>TOTAL</div>
-                <div>25</div>
-              </div>
-              <div className="flex flex-row justify-between">
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mx-[30px]">
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const stats = getClassStats("K.G 2");
+                return (
+                  <>
+                    <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
+                      <div>TOTAL</div>
+                      <div>{stats.total}</div>
+                    </div>
+                    <div className="flex flex-row justify-between">
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                          COMPLETED
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.completedPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(41,204,151,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(41,204,151,1)",
+                              trailColor: "rgba(234,250,245)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="mx-[30px]">
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#FFA412]">
+                          INCOMPLETE
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.incompletePercent,
+                              textSize: 9.21,
+                              textColor: "rgba(255,164,18,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(255,164,18,1)",
+                              trailColor: "rgba(255,250,235)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#F23645]">
+                          VOID
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.voidPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(242,54,69,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(242,54,69,1)",
+                              trailColor: "rgba(254,235,236)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
               <Link
                 to={"k.g 2"}
                 className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"
@@ -906,69 +1179,76 @@ const Tuition: React.FC = () => {
                 studentDropDown === "Nursery 1" ? "hidden md:block" : "hidden"
               }`}
             >
-              <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
-                <div>TOTAL</div>
-                <div>25</div>
-              </div>
-              <div className="flex flex-row justify-between">
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mx-[30px]">
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const stats = getClassStats("Nursery 1");
+                return (
+                  <>
+                    <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
+                      <div>TOTAL</div>
+                      <div>{stats.total}</div>
+                    </div>
+                    <div className="flex flex-row justify-between">
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                          COMPLETED
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.completedPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(41,204,151,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(41,204,151,1)",
+                              trailColor: "rgba(234,250,245)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="mx-[30px]">
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#FFA412]">
+                          INCOMPLETE
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.incompletePercent,
+                              textSize: 9.21,
+                              textColor: "rgba(255,164,18,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(255,164,18,1)",
+                              trailColor: "rgba(255,250,235)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#F23645]">
+                          VOID
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.voidPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(242,54,69,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(242,54,69,1)",
+                              trailColor: "rgba(254,235,236)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
               <Link
                 to={"nursery 1"}
                 className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"
@@ -1026,69 +1306,76 @@ const Tuition: React.FC = () => {
                 studentDropDown === "Nursery 2" ? "hidden md:block" : "hidden"
               }`}
             >
-              <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
-                <div>TOTAL</div>
-                <div>25</div>
-              </div>
-              <div className="flex flex-row justify-between">
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mx-[30px]">
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const stats = getClassStats("Nursery 2");
+                return (
+                  <>
+                    <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
+                      <div>TOTAL</div>
+                      <div>{stats.total}</div>
+                    </div>
+                    <div className="flex flex-row justify-between">
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                          COMPLETED
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.completedPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(41,204,151,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(41,204,151,1)",
+                              trailColor: "rgba(234,250,245)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="mx-[30px]">
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#FFA412]">
+                          INCOMPLETE
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.incompletePercent,
+                              textSize: 9.21,
+                              textColor: "rgba(255,164,18,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(255,164,18,1)",
+                              trailColor: "rgba(255,250,235)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#F23645]">
+                          VOID
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.voidPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(242,54,69,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(242,54,69,1)",
+                              trailColor: "rgba(254,235,236)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
               <Link
                 to={"nursery 2"}
                 className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"
@@ -1146,69 +1433,76 @@ const Tuition: React.FC = () => {
                 studentDropDown === "Primary 1" ? "hidden md:block" : "hidden"
               }`}
             >
-              <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
-                <div>TOTAL</div>
-                <div>25</div>
-              </div>
-              <div className="flex flex-row justify-between">
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mx-[30px]">
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const stats = getClassStats("Primary 1");
+                return (
+                  <>
+                    <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
+                      <div>TOTAL</div>
+                      <div>{stats.total}</div>
+                    </div>
+                    <div className="flex flex-row justify-between">
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                          COMPLETED
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.completedPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(41,204,151,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(41,204,151,1)",
+                              trailColor: "rgba(234,250,245)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="mx-[30px]">
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#FFA412]">
+                          INCOMPLETE
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.incompletePercent,
+                              textSize: 9.21,
+                              textColor: "rgba(255,164,18,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(255,164,18,1)",
+                              trailColor: "rgba(255,250,235)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#F23645]">
+                          VOID
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.voidPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(242,54,69,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(242,54,69,1)",
+                              trailColor: "rgba(254,235,236)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
               <Link
                 to={"primary 1"}
                 className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"
@@ -1266,69 +1560,76 @@ const Tuition: React.FC = () => {
                 studentDropDown === "Primary 2" ? "hidden md:block" : "hidden"
               }`}
             >
-              <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
-                <div>TOTAL</div>
-                <div>25</div>
-              </div>
-              <div className="flex flex-row justify-between">
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mx-[30px]">
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const stats = getClassStats("Primary 2");
+                return (
+                  <>
+                    <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
+                      <div>TOTAL</div>
+                      <div>{stats.total}</div>
+                    </div>
+                    <div className="flex flex-row justify-between">
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                          COMPLETED
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.completedPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(41,204,151,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(41,204,151,1)",
+                              trailColor: "rgba(234,250,245)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="mx-[30px]">
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#FFA412]">
+                          INCOMPLETE
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.incompletePercent,
+                              textSize: 9.21,
+                              textColor: "rgba(255,164,18,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(255,164,18,1)",
+                              trailColor: "rgba(255,250,235)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#F23645]">
+                          VOID
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.voidPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(242,54,69,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(242,54,69,1)",
+                              trailColor: "rgba(254,235,236)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
               <Link
                 to={"primary 2"}
                 className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"
@@ -1386,69 +1687,76 @@ const Tuition: React.FC = () => {
                 studentDropDown === "Primary 3" ? "hidden md:block" : "hidden"
               }`}
             >
-              <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
-                <div>TOTAL</div>
-                <div>25</div>
-              </div>
-              <div className="flex flex-row justify-between">
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mx-[30px]">
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const stats = getClassStats("Primary 3");
+                return (
+                  <>
+                    <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
+                      <div>TOTAL</div>
+                      <div>{stats.total}</div>
+                    </div>
+                    <div className="flex flex-row justify-between">
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                          COMPLETED
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.completedPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(41,204,151,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(41,204,151,1)",
+                              trailColor: "rgba(234,250,245)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="mx-[30px]">
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#FFA412]">
+                          INCOMPLETE
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.incompletePercent,
+                              textSize: 9.21,
+                              textColor: "rgba(255,164,18,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(255,164,18,1)",
+                              trailColor: "rgba(255,250,235)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#F23645]">
+                          VOID
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.voidPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(242,54,69,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(242,54,69,1)",
+                              trailColor: "rgba(254,235,236)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
               <Link
                 to={"primary 3"}
                 className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"
@@ -1506,69 +1814,76 @@ const Tuition: React.FC = () => {
                 studentDropDown === "Primary 4" ? "hidden md:block" : "hidden"
               }`}
             >
-              <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
-                <div>TOTAL</div>
-                <div>25</div>
-              </div>
-              <div className="flex flex-row justify-between">
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mx-[30px]">
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const stats = getClassStats("Primary 4");
+                return (
+                  <>
+                    <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
+                      <div>TOTAL</div>
+                      <div>{stats.total}</div>
+                    </div>
+                    <div className="flex flex-row justify-between">
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                          COMPLETED
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.completedPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(41,204,151,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(41,204,151,1)",
+                              trailColor: "rgba(234,250,245)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="mx-[30px]">
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#FFA412]">
+                          INCOMPLETE
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.incompletePercent,
+                              textSize: 9.21,
+                              textColor: "rgba(255,164,18,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(255,164,18,1)",
+                              trailColor: "rgba(255,250,235)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#F23645]">
+                          VOID
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.voidPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(242,54,69,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(242,54,69,1)",
+                              trailColor: "rgba(254,235,236)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
               <Link
                 to={"primary 4"}
                 className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"
@@ -1626,69 +1941,76 @@ const Tuition: React.FC = () => {
                 studentDropDown === "Primary 5" ? "hidden md:block" : "hidden"
               }`}
             >
-              <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
-                <div>TOTAL</div>
-                <div>25</div>
-              </div>
-              <div className="flex flex-row justify-between">
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mx-[30px]">
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
-                    COMPLETED
-                  </div>
-                  <div className="font-Poppins">
-                    <CircularProgressBar
-                      style={{
-                        percentage: 60,
-                        textSize: 9.21,
-                        textColor: "rgba(41,204,151,1)",
-                        fontWeight: 600,
-                        pathColor: "rgba(41,204,151,1)",
-                        trailColor: "rgba(234,250,245)",
-                        weight: 7,
-                        size: 61.39,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const stats = getClassStats("Primary 5");
+                return (
+                  <>
+                    <div className="font-Poppins text-lg font-medium flex flex-col items-center mb-[25px]">
+                      <div>TOTAL</div>
+                      <div>{stats.total}</div>
+                    </div>
+                    <div className="flex flex-row justify-between">
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#29CC97]">
+                          COMPLETED
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.completedPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(41,204,151,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(41,204,151,1)",
+                              trailColor: "rgba(234,250,245)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="mx-[30px]">
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#FFA412]">
+                          INCOMPLETE
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.incompletePercent,
+                              textSize: 9.21,
+                              textColor: "rgba(255,164,18,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(255,164,18,1)",
+                              trailColor: "rgba(255,250,235)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-Lora font-bold text-[8px] mb-[10.23px] text-center text-[#F23645]">
+                          VOID
+                        </div>
+                        <div className="font-Poppins">
+                          <CircularProgressBar
+                            style={{
+                              percentage: stats.voidPercent,
+                              textSize: 9.21,
+                              textColor: "rgba(242,54,69,1)",
+                              fontWeight: 600,
+                              pathColor: "rgba(242,54,69,1)",
+                              trailColor: "rgba(254,235,236)",
+                              weight: 7,
+                              size: 61.39,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
               <Link
                 to={"primary 5"}
                 className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"
@@ -1701,6 +2023,9 @@ const Tuition: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Toast Notification Container */}
+      <ToastNotification />
     </div>
   );
 };

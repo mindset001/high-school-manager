@@ -20,6 +20,7 @@ interface HomeAnalyticDataInterface {
   total_students: number;
   total_staffs: number;
   total_subject: number;
+  total_classes: number;
   completed_tuition: number;
   void: number;
   incompleted_tuition: number;

@@ -5,7 +5,7 @@ export const deleteData = async ({id, studentid} : {id: number, studentid: numbe
     return response.data;
   };
 
-export const deleteEvent = async (id:number) => {
+export const deleteEvent = async (id: string | number) => {
     const response = await apiClient.delete(
       `/calender/${id}/`
     );

@@ -59,8 +59,8 @@ export const createStaff = async (req: AuthRequest, res: Response): Promise<void
     } = req.body;
 
     // Validate required fields
-    if (!email || !first_name || !last_name) {
-      res.status(400).json({ message: 'Email, first name, and last name are required' });
+    if (!email || !first_name || !last_name || !phone_number) {
+      res.status(400).json({ message: 'Email, first name, last name, and phone number are required' });
       return;
     }
 
@@ -71,9 +71,8 @@ export const createStaff = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // Generate a temporary password (should be sent to staff via email in production)
-    const tempPassword = 'Staff@123';
-    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    // Use phone number as password for staff login
+    const hashedPassword = await bcrypt.hash(phone_number, 10);
 
     // Handle image upload if provided
     let profileImageUrl = '';
@@ -121,9 +120,8 @@ export const createStaff = async (req: AuthRequest, res: Response): Promise<void
       .populate('userId', 'firstName lastName email phoneNumber profileImage');
 
     res.status(201).json({ 
-      message: 'Staff created successfully', 
+      message: 'Staff created successfully. Login with email and phone number as password.', 
       staff: populatedStaff,
-      tempPassword: tempPassword, // In production, this should be sent via email
     });
   } catch (error: any) {
     console.error('Error creating staff:', error);
@@ -178,7 +176,11 @@ export const updateStaff = async (req: AuthRequest, res: Response): Promise<void
       if (first_name) userUpdates.firstName = first_name;
       if (last_name) userUpdates.lastName = last_name;
       if (email) userUpdates.email = email.toLowerCase();
-      if (phone_number) userUpdates.phoneNumber = phone_number;
+      if (phone_number) {
+        userUpdates.phoneNumber = phone_number;
+        // Update password to match new phone number
+        userUpdates.password = await bcrypt.hash(phone_number, 10);
+      }
       if (profileImageUrl) userUpdates.profileImage = profileImageUrl;
 
       await User.findByIdAndUpdate(staff.userId, userUpdates);
@@ -260,6 +262,132 @@ export const uploadStaffDocument = async (req: AuthRequest, res: Response): Prom
     
     res.json({ message: 'Document uploaded successfully', document: result });
   } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const resetStaffPasswordsToPhoneNumbers = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // Get all staff with their user data
+    const allStaff = await Staff.find().populate('userId');
+    
+    let updatedCount = 0;
+    let errorCount = 0;
+    const details: any[] = [];
+
+    for (const staff of allStaff) {
+      try {
+        if (staff.userId) {
+          const user = await User.findById(staff.userId);
+          if (user && user.phoneNumber) {
+            // Update password to phone number
+            const hashedPassword = await bcrypt.hash(user.phoneNumber, 10);
+            user.password = hashedPassword;
+            await user.save();
+            updatedCount++;
+            details.push({
+              email: user.email,
+              phoneNumber: user.phoneNumber,
+              status: 'updated'
+            });
+          } else {
+            details.push({
+              userId: staff.userId,
+              status: 'no phone number'
+            });
+          }
+        }
+      } catch (err) {
+        console.error(`Error updating staff ${staff._id}:`, err);
+        errorCount++;
+        details.push({
+          staffId: staff._id,
+          status: 'error',
+          error: err
+        });
+      }
+    }
+
+    res.json({ 
+      message: 'Staff passwords reset successfully',
+      updated: updatedCount,
+      errors: errorCount,
+      total: allStaff.length,
+      details: details
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const debugStaffLogin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { email } = req.params;
+    
+    // Find user by email (case insensitive)
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      res.json({ 
+        message: 'User not found',
+        email: email,
+        searchedEmail: email.toLowerCase()
+      });
+      return;
+    }
+
+    // Find associated staff record
+    const staff = await Staff.findOne({ userId: user._id });
+    
+    // Test if password might be the old default
+    const isOldPassword = await bcrypt.compare('Staff@123', user.password);
+    const isPhonePassword = user.phoneNumber ? await bcrypt.compare(user.phoneNumber, user.password) : false;
+    
+    res.json({
+      message: 'User found',
+      user: {
+        id: user._id,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        isActive: user.isActive,
+        firstName: user.firstName,
+        lastName: user.lastName
+      },
+      staff: staff ? {
+        id: staff._id,
+        staffId: staff.staffId,
+        department: staff.department,
+        position: staff.position
+      } : null,
+      passwordInfo: {
+        hasPassword: !!user.password,
+        passwordLength: user.password?.length || 0,
+        isOldDefaultPassword: isOldPassword,
+        matchesPhoneNumber: isPhonePassword,
+        phoneNumber: user.phoneNumber
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Get staff by class name
+export const getStaffByClass = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { className } = req.params;
+    
+    // Find staff who are assigned to the specified class
+    const staff = await Staff.find({ classes: { $in: [className] } })
+      .populate('userId', 'firstName lastName email phoneNumber profileImage');
+    
+    res.json({ 
+      message: 'Staff retrieved successfully',
+      staff: staff,
+      className: className
+    });
+  } catch (error: any) {
+    console.error('Error fetching staff by class:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

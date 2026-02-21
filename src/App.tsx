@@ -45,6 +45,7 @@ import UserProvider from "./hooks/UseUserContext";
 import Results from "./pages/dashboard/Results";
 import ResultNames from "./pages/dashboard/ResultNames";
 import ResultNamesMobile from "./pages/dashboard/ResultNamesMobile";
+import ResultGuardian from "./pages/guardian-dashboard/ResultGuardian";
 import ProtectedRoute from "./pages/ProtectedRoute";
 // import ResultsLayout from "./layouts/role/ResultsLayout";
 // import { getRole } from "./utils/authTokens";
@@ -58,6 +59,7 @@ const StaffLogin = lazy(() => import("./pages/login/StaffLogin"));
 const GuardianLogin = lazy(() => import("./pages/login/GuardianLogin"));
 const Overview = lazy(() => import("./pages/dashboard/Overview"));
 const Calendar = lazy(() => import("./pages/dashboard/Calendar"));
+const Subjects = lazy(() => import("./pages/dashboard/Subjects"));
 // const Attendance = lazy(() => import("./pages/dashboard/Attendance"));
 const ResultsLayout = lazy(() => import("./layouts/role/ResultsLayout"));
 // const Chat = lazy(() => import("./pages/dashboard/Chat"));
@@ -131,6 +133,7 @@ function App() {
             <Route path="staff" element={<Staff />} />
           ) : role === "staff" ? null : null} */}
             {/* ENDS */}
+            <Route path="subjects" element={<Subjects />} />
             <Route path="calendar" element={<Calendar />} />
             {/* ROLE INTERCHANGING FOR TUITION*/}
             <Route path="tuition" element={<TuitionLayout />} />
@@ -139,6 +142,7 @@ function App() {
           ) : null} */}
             {/* ENDS */}
             <Route path="timetable" element={<TimetablesGuardian />} />
+            <Route path="guardian-result/:id" element={<ResultGuardian />} />
             {/* <Route path="attendance" element={<Attendance />} /> */}
             {/* {role === "admin" || role === "guardian" ? (
             <Route path="staff" element={<Staff />} />

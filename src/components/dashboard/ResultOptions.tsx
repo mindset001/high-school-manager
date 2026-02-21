@@ -8,7 +8,7 @@ import {
   generateTemplate,
   uploadResult,
 } from "../../services/api/calls/postApis";
-import { Link } from "react-router-dom";
+import { getAccessToken } from "../../utils/authTokens";
 // import { Link, useNavigate } from "react-router-dom";
 interface subjectDataI {
   description: string;
@@ -53,6 +53,137 @@ const ResultOptions: React.FC<{
       class_id: classActiveID,
     });
   const [downloadTemplate, setDownloadTemplate] = useState("");
+  const [selectedTerm, setSelectedTerm] = useState<string>("First Term");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2026/2027");
+  
+  // Handle template download with proper authentication
+  const handleDownloadTemplate = async () => {
+    console.log('=== Download Template Started ===');
+    console.log('downloadTemplate value:', downloadTemplate);
+    
+    if (!downloadTemplate) {
+      toast.error('No template to download');
+      console.error('No download template URL available');
+      return;
+    }
+    
+    try {
+      // Get authentication credentials from cookies (not localStorage)
+      const token = getAccessToken(); // This gets the token from cookies
+      const apiKey = import.meta.env.VITE_REACT_APP_API_KEY;
+      
+      console.log('Token exists:', !!token);
+      console.log('Token value:', token ? `${token.substring(0, 20)}...` : 'null');
+      console.log('API Key:', apiKey);
+      
+      if (!token) {
+        toast.error('Authentication required. Please log in.');
+        console.error('No access token found in cookies');
+        return;
+      }
+      
+      if (!apiKey) {
+        toast.error('API configuration error');
+        console.error('No API key found in environment');
+        return;
+      }
+      
+      // Build the full URL
+      const baseURL = import.meta.env.VITE_REACT_APP_API_URL || 'http://localhost:5000/api';
+      const fullUrl = downloadTemplate.startsWith('http') 
+        ? downloadTemplate 
+        : `${baseURL.replace('/api', '')}${downloadTemplate}`;
+      
+      console.log('Download URL:', fullUrl);
+      console.log('Base URL:', baseURL);
+      
+      // Show loading toast
+      const loadingToast = toast.loading('Downloading template...');
+      
+      // Fetch the file with authentication headers
+      console.log('Starting fetch request...');
+      const response = await fetch(fullUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-API-Key': apiKey
+        },
+        mode: 'cors',
+        credentials: 'include'
+      });
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Download error response:', errorText);
+        toast.dismiss(loadingToast);
+        
+        if (response.status === 403) {
+          toast.error('Access denied. Please check your permissions or log in again.');
+        } else if (response.status === 404) {
+          toast.error('Template file not found.');
+        } else if (response.status === 401) {
+          toast.error('Session expired. Please log in again.');
+        } else {
+          toast.error(`Download failed: ${response.statusText}`);
+        }
+        return;
+      }
+      
+      // Get the blob from response
+      console.log('Getting blob from response...');
+      const blob = await response.blob();
+      console.log('Downloaded blob size:', blob.size, 'bytes');
+      console.log('Downloaded blob type:', blob.type);
+      
+      if (blob.size === 0) {
+        toast.dismiss(loadingToast);
+        toast.error('Downloaded file is empty');
+        console.error('Empty blob received');
+        return;
+      }
+      
+      // Create object URL from blob
+      const url = window.URL.createObjectURL(blob);
+      console.log('Created object URL:', url);
+      
+      // Create temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.style.display = 'none';
+      
+      // Extract filename from download_link or use default
+      const filename = downloadTemplate.split('/').pop() || 'result_template.xlsx';
+      link.download = filename;
+      console.log('Downloading as:', filename);
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up after a short delay
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        console.log('Cleanup completed');
+      }, 100);
+      
+      // Show success and close modal
+      toast.dismiss(loadingToast);
+      toast.success('Template downloaded successfully!');
+      console.log('=== Download Template Completed Successfully ===');
+      setOptionsToggle(false);
+      
+    } catch (error: any) {
+      console.error('=== Download Template Error ===');
+      console.error('Error details:', error);
+      console.error('Error stack:', error.stack);
+      toast.error(`Failed to download template: ${error.message}`);
+    }
+  };
+  
   useEffect(() => {
     console.log("Selected Subjects", selectedSubjectsData);
   }, [selectedSubjectsData]);
@@ -95,7 +226,19 @@ const ResultOptions: React.FC<{
     useGenerateTemplate;
   const handleSubmitSelectedSubject = (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    mutateTemp(selectedSubjectsData, {
+    
+    if (!selectedTerm || !selectedAcademicYear) {
+      toast.error("Please select term and academic year");
+      return;
+    }
+    
+    const templateData = {
+      ...selectedSubjectsData,
+      term: selectedTerm,
+      academicYear: selectedAcademicYear,
+    };
+    
+    mutateTemp(templateData, {
       onSuccess: (response: { data: { data: { download_link: string } } }) => {
         queryClient.invalidateQueries({ queryKey: ["subject"] });
         const generatedTemp = response.data.data.download_link;
@@ -162,10 +305,18 @@ const ResultOptions: React.FC<{
     useUploadResult;
   const handleUploadResult = (e: { preventDefault: () => void }) => {
     e.preventDefault();
+    
+    if (!selectedTerm || !selectedAcademicYear) {
+      toast.error("Please select term and academic year");
+      return;
+    }
+    
     const data = new FormData();
     if (selectedFile.file) {
       data.append("file", selectedFile.file);
-      data.append("stu_class", selectedFile.stu_class as unknown as string);
+      data.append("class_id", selectedFile.stu_class as unknown as string);
+      data.append("term", selectedTerm);
+      data.append("academicYear", selectedAcademicYear);
     }
     console.log("Testing formData()", data);
     mutateResult(data, {
@@ -273,19 +424,52 @@ const ResultOptions: React.FC<{
           </button>
         </form>
       </div>
-      <Link to={downloadTemplate}>
-        <button
-          onClick={() => setOptionsToggle(false)}
-          disabled={!downloadTemplate}
-          className={` w-full ${
-            !downloadTemplate
-              ? "cursor-not-allowed bg-[#c2cacf] hover:bg-[#c2cacf] text-slate-400"
-              : "cursor-pointer bg-[#05878F] hover:bg-[#05878F]/70 text-white"
-          }`}
+      <button
+        onClick={handleDownloadTemplate}
+        disabled={!downloadTemplate}
+        className={` w-full ${
+          !downloadTemplate
+            ? "cursor-not-allowed bg-[#c2cacf] hover:bg-[#c2cacf] text-slate-400"
+            : "cursor-pointer bg-[#05878F] hover:bg-[#05878F]/70 text-white"
+        }`}
+      >
+        Download Template
+      </button>
+      
+      {/* Term Selection */}
+      <div className="border bg-white">
+        <label className="text-sm font-medium block px-2 py-1 text-gray-700">
+          Select Term
+        </label>
+        <select
+          value={selectedTerm}
+          onChange={(e) => setSelectedTerm(e.target.value)}
+          className="w-full px-2 py-2 border-t bg-white focus:outline-none focus:ring-2 focus:ring-[#05878F] cursor-pointer"
         >
-          Download Template
-        </button>
-      </Link>
+          <option value="First Term">First Term</option>
+          <option value="Second Term">Second Term</option>
+          <option value="Third Term">Third Term</option>
+        </select>
+      </div>
+      
+      {/* Academic Year Selection */}
+      <div className="border bg-white">
+        <label className="text-sm font-medium block px-2 py-1 text-gray-700">
+          Academic Year
+        </label>
+        <select
+          value={selectedAcademicYear}
+          onChange={(e) => setSelectedAcademicYear(e.target.value)}
+          className="w-full px-2 py-2 border-t bg-white focus:outline-none focus:ring-2 focus:ring-[#05878F] cursor-pointer"
+        >
+          <option value="2025/2026">2025/2026</option>
+          <option value="2026/2027">2026/2027</option>
+          <option value="2027/2028">2027/2028</option>
+          <option value="2028/2029">2028/2029</option>
+          <option value="2029/2030">2029/2030</option>
+        </select>
+      </div>
+      
       <div className="file-upload text-base md:text-sm lg:text-base relative">
         <label
           //   htmlFor="file-input"

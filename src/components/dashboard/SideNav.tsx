@@ -7,6 +7,7 @@ import StaffSVG from "../svg/StaffSVG";
 import CalendarSVG from "../svg/dashboard navbar svg/CalendarSVG";
 import TuitionSVG from "../svg/dashboard navbar svg/TuitionSVG";
 import TimetableSVG from "../svg/dashboard navbar svg/TimetableSVG";
+import SubjectsSVG from "../svg/dashboard navbar svg/SubjectsSVG";
 // import AttendanceSVG from "../svg/dashboard navbar svg/AttendanceSVG";
 import ResultsSVG from "../svg/dashboard navbar svg/ResultsSVG";
 // import ChatSVG from "../svg/dashboard navbar svg/ChatSVG";
@@ -52,7 +53,13 @@ const SideNav: React.FC<SideNavProps> = ({ mobileToggle, setMobileToggle }) => {
       item: <StaffSVG />,
       to: "staff",
       text: "Staff",
-      roles: ["admin", "guardian"],
+      roles: ["admin"],
+    },
+    {
+      item: <SubjectsSVG />,
+      to: "subjects",
+      text: "Subjects",
+      roles: ["admin", "staff"],
     },
     {
       item: <CalendarSVG />,
@@ -82,7 +89,7 @@ const SideNav: React.FC<SideNavProps> = ({ mobileToggle, setMobileToggle }) => {
       item: <ResultsSVG />,
       to: "results",
       text: "Results",
-      roles: ["admin", "staff", "guardian"],
+      roles: ["admin", "staff"],
     },
     // {
     //   item: <ChatSVG />,

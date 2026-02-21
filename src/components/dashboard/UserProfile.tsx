@@ -37,6 +37,7 @@ const UserProfile: React.FC<Props> = ({
       !isGuardianWardLoading &&
       !isGuardianWardError &&
       guardianWard &&
+      guardianWard.students &&
       guardianWard.students.length > 0
     ) {
       const { student_class_id, id } = guardianWard.students[0];
