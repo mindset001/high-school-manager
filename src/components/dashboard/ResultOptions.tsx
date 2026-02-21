@@ -18,7 +18,7 @@ interface subjectDataI {
 
 interface selectedSubjectsDataI {
   subjects: string[];
-  class_id: number;
+  class_id: number | string;
 }
 const ResultOptions: React.FC<{
   optionsToggle: boolean;
@@ -39,7 +39,7 @@ const ResultOptions: React.FC<{
 }) => {
   const [selectedFile, setSelectedFile] = useState<{
     file: File | null;
-    stu_class: number;
+    stu_class: number | string;
   }>({
     file: null,
     stu_class: 0,
