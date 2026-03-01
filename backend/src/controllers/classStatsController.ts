@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import { Class } from '../models/Class.js';
 import { Student } from '../models/Student.js';
 import { Payment } from '../models/Payment.js';
@@ -31,7 +32,7 @@ export const getClassStats = async (req: AuthRequest, res: Response): Promise<vo
         
         // Get all payments for students in this class
         const studentIds = students.map((s: any) => s._id);
-        const currentYear = cls.academicYear || '2026/2027';
+        const currentYear = cls.academicYear;
         
         // Calculate payment status for each student
         let paidCount = 0;
@@ -41,10 +42,15 @@ export const getClassStats = async (req: AuthRequest, res: Response): Promise<vo
         
         await Promise.all(
           studentIds.map(async (studentId: any) => {
-            const payments = await Payment.find({ 
-              studentId,
-              academicYear: currentYear 
-            });
+            // only filter by academicYear if it's defined on the class
+            const query: any = { studentId };
+            if (currentYear) {
+              query.academicYear = currentYear;
+            }
+            const payments = await Payment.find(query);
+            if (!currentYear) {
+              console.log(`classStats: class ${cls.name} has no academicYear, fetching all payments for student ${studentId}`);
+            }
             
             if (payments.length === 0) {
               unpaidCount++;
@@ -101,9 +107,16 @@ export const getClassStats = async (req: AuthRequest, res: Response): Promise<vo
 export const getClassStatById = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    
+
+    // Ensure the id is a valid Mongo ObjectId before querying
+    // this prevents CastErrors when invalid values (e.g. "NaN") are provided
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ message: 'Invalid class id' });
+      return;
+    }
+
     const cls = await Class.findById(id);
-    
+
     if (!cls) {
       res.status(404).json({ message: 'Class not found' });
       return;
@@ -144,10 +157,14 @@ export const getClassStatById = async (req: AuthRequest, res: Response): Promise
     
     await Promise.all(
       studentIds.map(async (studentId: any) => {
-        const payments = await Payment.find({ 
-          studentId,
-          academicYear: currentYear 
-        });
+        const query: any = { studentId };
+        if (currentYear) {
+          query.academicYear = currentYear;
+        }
+        const payments = await Payment.find(query);
+        if (!currentYear) {
+          console.log(`getClassStatById: class ${cls.name} has no academicYear, fetching all payments for student ${studentId}`);
+        }
         
         if (payments.length === 0) {
           unpaidCount++;

@@ -27,10 +27,11 @@ interface classTuitionPercentInterface {
   void: number;
 }
 const StudentAdminOverview: React.FC = () => {
+  // keep the id as a string since the backend expects a Mongo ObjectId
   const [studentDropDown, setStudentDropDown] = useState<{
     class: string;
-    id: number;
-  }>({ class: "", id: 0 });
+    id: string;
+  }>({ class: "", id: "" });
   // const [studentDropDownId, setStudentDropDownId] = useState<number>(0);
   // const [classNameData, setClassNameData] = useState<classesInterface[]>([]);
   const [classTuitionPercent, setClassTuitionPercent] =
@@ -86,7 +87,7 @@ const StudentAdminOverview: React.FC = () => {
   } = useQuery({
     queryKey: ["classStat", studentDropDown.id],
     queryFn: () => getClassStatId(studentDropDown.id),
-    enabled: studentDropDown.id !== 0,
+    enabled: studentDropDown.id !== "",
   });
   interface classStatsInterface {
     id: number;
@@ -189,7 +190,7 @@ const StudentAdminOverview: React.FC = () => {
                 <button
                   onClick={() => {
                     setStudentDropDown({
-                      id: Number(classdata.id),
+                      id: classdata.id, // already a string/objectId
                       class:
                         studentDropDown.class === classdata.name
                           ? ""

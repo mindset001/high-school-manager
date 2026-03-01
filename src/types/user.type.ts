@@ -36,7 +36,7 @@ export interface IEvent {
   date: string;
 }
 export interface baseClassInterface {
-  id?: number;
+  id?: number | string;
   total_starterpack?: number;
   total_others?: number;
   name?: string;
@@ -51,6 +51,8 @@ export interface baseClassInterface {
   library_fee?: number;
   extra_activities?: number;
   starterPack?: number;
+  teacher?: string;            // ObjectId of assigned teacher
+  teacherName?: string;        // human readable name
 }
 
 export interface totalPercentageValueI {

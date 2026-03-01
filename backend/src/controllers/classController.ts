@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { Class } from '../models/Class.js';
 import { Student } from '../models/Student.js';
+import { Staff } from '../models/Staff.js';
 import { AuthRequest } from '../middleware/auth.js';
 
 export const getAllClasses = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -37,11 +38,21 @@ export const getClassById = async (req: AuthRequest, res: Response): Promise<voi
 export const createClass = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const classData = req.body;
-    
+    const teacherId = classData.teacher;
+
     const newClass = new Class(classData);
     await newClass.save();
-    
-    res.status(201).json({ message: 'Class created successfully', class: newClass });
+
+    // if a teacher was specified, add this class to their record
+    if (teacherId) {
+      const name = newClass.name;
+      await Staff.findByIdAndUpdate(teacherId, { $addToSet: { classes: name } });
+    }
+
+    const populated = await Class.findById(newClass._id)
+      .populate('teacher', 'firstName lastName email');
+
+    res.status(201).json({ message: 'Class created successfully', class: populated });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -51,16 +62,36 @@ export const updateClass = async (req: AuthRequest, res: Response): Promise<void
   try {
     const { id } = req.params;
     const updates = req.body;
-    
+
+    // fetch current class info to track teacher changes
+    const oldClass = await Class.findById(id);
+    const oldTeacherId = oldClass?.teacher ? oldClass.teacher.toString() : null;
+    const className = oldClass?.name || '';
+
     const classData = await Class.findByIdAndUpdate(id, updates, { new: true })
       .populate('teacher', 'firstName lastName email')
       .populate('students', 'firstName lastName');
-    
+
     if (!classData) {
       res.status(404).json({ message: 'Class not found' });
       return;
     }
-    
+
+    // if teacher field was part of update, maintain staff assignments
+    if ('teacher' in updates) {
+      const newTeacherId = updates.teacher;
+
+      // remove class from old teacher
+      if (oldTeacherId && oldTeacherId !== newTeacherId) {
+        await Staff.findByIdAndUpdate(oldTeacherId, { $pull: { classes: className } });
+      }
+
+      // add class to new teacher (if provided)
+      if (newTeacherId) {
+        await Staff.findByIdAndUpdate(newTeacherId, { $addToSet: { classes: className } });
+      }
+    }
+
     res.json({ message: 'Class updated successfully', class: classData });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -76,6 +107,12 @@ export const deleteClass = async (req: AuthRequest, res: Response): Promise<void
     if (!classData) {
       res.status(404).json({ message: 'Class not found' });
       return;
+    }
+
+    // if class had a teacher, remove class name from their record
+    if (classData.teacher) {
+      const name = classData.name;
+      await Staff.findByIdAndUpdate(classData.teacher, { $pull: { classes: name } });
     }
     
     res.json({ message: 'Class deleted successfully' });

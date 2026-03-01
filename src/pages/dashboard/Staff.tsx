@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { IProfile } from "../../types/user.type";
 import { Add, FilterMobile } from "../../assets/images/dashboard/students";
 import UserDetails from "../../shared/UserDetails";
+import useClasses from "../../hooks/useClasses";
 import Pagination from "../../shared/Pagination";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCreateStaff } from "../../services/api/staffApis";
@@ -20,6 +21,8 @@ const Staff: React.FC = () => {
     queryFn: () => getStaffs(),
   });
   
+  const { classNameData: classOptions } = useClasses();
+
   const staffs: IProfile[] = useMemo(() => {
     if (!data || !data.data) {
       console.log('No staff data available');
@@ -36,25 +39,36 @@ const Staff: React.FC = () => {
     }
     
     // Map backend staff structure to frontend structure
-    return staffList.map((staff: any) => ({
-      id: staff._id || staff.id,
-      first_name: staff.userId?.firstName || '',
-      last_name: staff.userId?.lastName || '',
-      middle_name: staff.middleName || '',
-      age: staff.age || '0',
-      image: staff.userId?.profileImage || profileImage,
-      subject: staff.subjects?.join(', ') || staff.department || '',
-      date_of_birth: staff.dateOfBirth ? new Date(staff.dateOfBirth).toISOString().split('T')[0] : '',
-      gender: staff.gender || '',
-      phone_number: staff.userId?.phoneNumber || '',
-      homeAddress: staff.address || '',
-      email: staff.userId?.email || '',
-      homeTown: '',
-      stateOfOrigin: '',
-      classTeacher: staff.classes?.join(', ') || '',
-      qualification: staff.qualification?.join(', ') || '',
-    }));
-  }, [data]);
+    return staffList.map((staff: any) => {
+      let classesString = '';
+      if (Array.isArray(staff.classes) && staff.classes.length > 0) {
+        classesString = staff.classes
+          .map((cid: string) => {
+            const cls = classOptions.find((c) => c.id === cid);
+            return cls ? cls.name : cid;
+          })
+          .join(', ');
+      }
+      return {
+        id: staff._id || staff.id,
+        first_name: staff.userId?.firstName || '',
+        last_name: staff.userId?.lastName || '',
+        middle_name: staff.middleName || '',
+        age: staff.age || '0',
+        image: staff.userId?.profileImage || profileImage,
+        subject: staff.subjects?.join(', ') || staff.department || '',
+        date_of_birth: staff.dateOfBirth ? new Date(staff.dateOfBirth).toISOString().split('T')[0] : '',
+        gender: staff.gender || '',
+        phone_number: staff.userId?.phoneNumber || '',
+        homeAddress: staff.address || '',
+        email: staff.userId?.email || '',
+        homeTown: '',
+        stateOfOrigin: '',
+        classTeacher: classesString,
+        qualification: staff.qualification?.join(', ') || '',
+      };
+    });
+  }, [data, classOptions]);
   
   // CONSOLE LOGGING ERROR IF REQUEST FAILS
   isError && console.log('Error fetching staff:', error);

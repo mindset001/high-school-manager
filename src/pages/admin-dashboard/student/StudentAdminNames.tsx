@@ -31,7 +31,7 @@ import { getUser } from "../../../utils/authTokens";
 
 const tableHeader: string[] = [
   "Name",
-  "ID",
+  // "ID",
   "Age",
   "Gender",
   "Tuition Paid",
@@ -729,7 +729,7 @@ const StudentAdminNames: React.FC = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="">{data.id}</td>
+                          {/* <td className="">{data.id}</td> */}
                           <td className="">{data.age}</td>
                           <td className="">{data.gender}</td>
                           <td 

@@ -25,8 +25,12 @@ export const getClassStudentsId = (id: number | string) => {
 //   return apiClient.get(`classes/${id}/student/3`);
 // };
 
-export const getClassStatId = (id: number | null) => {
-  return apiClient.get(`class_stat/${id}`);
+export const getClassStatId = (id: string | null) => {
+  // If id is null or empty string, this should generally be prevented
+  // by the caller (query `enabled` flag), but ensure we don't construct
+  // a URL like /class_stat/null
+  const safeId = id || '';
+  return apiClient.get(`class_stat/${safeId}`);
 };
 // import apiClient from "./apiClient";
 

@@ -1,6 +1,7 @@
 // AddStaffForm.tsx
 import React, { useState } from "react";
 import { IProfile } from "../../types/user.type";
+import useClasses from "../../hooks/useClasses";
 
 interface AddStaffFormProps {
   onSubmit: (staff: IProfile) => void;
@@ -23,6 +24,7 @@ const AddStaffForm: React.FC<AddStaffFormProps> = ({ onSubmit }) => {
     classTeacher: "",
     qualification: "",
   });
+  const { classNameData: classOptions, isClassLoading } = useClasses();
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -96,6 +98,22 @@ const AddStaffForm: React.FC<AddStaffFormProps> = ({ onSubmit }) => {
           onChange={handleChange}
           required
         />
+      </div>
+      <div>
+        <label>Class Teacher</label>
+        <select
+          name="classTeacher"
+          value={formData.classTeacher}
+          onChange={handleChange}
+          disabled={isClassLoading}
+        >
+          <option value="">-- select class --</option>
+          {classOptions.map((cls) => (
+            <option key={cls.id} value={cls.name}>
+              {cls.name}
+            </option>
+          ))}
+        </select>
       </div>
       {/* Add more fields as needed */}
       <button type="submit">Add Staff</button>

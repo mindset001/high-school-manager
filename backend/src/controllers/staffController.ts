@@ -58,9 +58,9 @@ export const createStaff = async (req: AuthRequest, res: Response): Promise<void
       assigned_to,
     } = req.body;
 
-    // Validate required fields
-    if (!email || !first_name || !last_name || !phone_number) {
-      res.status(400).json({ message: 'Email, first name, last name, and phone number are required' });
+    // Validate essential fields
+    if (!email || !first_name || !last_name) {
+      res.status(400).json({ message: 'Email, first name and last name are required' });
       return;
     }
 
@@ -71,8 +71,9 @@ export const createStaff = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // Use phone number as password for staff login
-    const hashedPassword = await bcrypt.hash(phone_number, 10);
+    // Determine initial password: use phone if provided, else fall back to default
+    const plainPassword = phone_number || 'Staff@123';
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     // Handle image upload if provided
     let profileImageUrl = '';

@@ -30,7 +30,7 @@ const classStatsTableHeader: string[] = [
 
 const Tuition: React.FC = () => {
   const [classFee, setClassFee] = useState<baseClassInterface>({
-    id: 0,
+    id: "",
     total_starterpack: 0,
     total_others: 0,
     name: "",
@@ -44,6 +44,8 @@ const Tuition: React.FC = () => {
     games: 0,
     library_fee: 0,
     extra_activities: 0,
+    teacher: "",
+    teacherName: "",
   });
   // GETTING CLASS TUITION Data
   const {
@@ -55,6 +57,23 @@ const Tuition: React.FC = () => {
     queryKey: ["BaseClass"],
     queryFn: () => getBaseClass(),
   });
+
+  // fetch staff list for teacher dropdown
+  const {
+    data: staffListData,
+    isLoading: isStaffLoading,
+    isError: isStaffError,
+  } = useQuery({
+    queryKey: ['staffs'],
+    queryFn: () => getStaffs(),
+  });
+
+  const teachers = useMemo(() => {
+    if (!staffListData || !staffListData.data) return [];
+    const list = staffListData.data.staff;
+    if (!Array.isArray(list)) return [];
+    return list.map((s: any) => ({ id: s._id || s.id, name: `${s.userId?.firstName || ''} ${s.userId?.lastName || ''}` }));
+  }, [staffListData]);
 
   // const baseClass: baseClassInterface[] = useMemo(() => {
   //   return (baseClassData && baseClassData.data.data) || [];
@@ -123,6 +142,10 @@ const Tuition: React.FC = () => {
     // Backend returns { classStats: [...] }
     return classStatData.data.classStats || [];
   }, [classStatData]);
+
+  useEffect(() => {
+    console.log('🚦 classStats from backend:', classStats);
+  }, [classStats]);
   // console.log(
   //   "Class Stats:",
   //   classStats,
@@ -140,6 +163,7 @@ const Tuition: React.FC = () => {
     );
     
     if (!stats || !stats.total || stats.total === 0) {
+      console.warn(`getClassStats: no stats found for class ${className}`);
       return {
         total: 0,
         completed: 0,
@@ -156,7 +180,7 @@ const Tuition: React.FC = () => {
     const void_count = stats.paid_nothing || 0;
     const total = stats.total || 0;
     
-    return {
+    const computed = {
       total,
       completed,
       incomplete,
@@ -165,6 +189,8 @@ const Tuition: React.FC = () => {
       incompletePercent: Math.round((incomplete / total) * 100),
       voidPercent: Math.round((void_count / total) * 100),
     };
+    console.log(`getClassStats for ${className}:`, computed);
+    return computed;
   };
 
   // Student fees from classes to students
@@ -257,7 +283,7 @@ const Tuition: React.FC = () => {
         baseclass.name?.toLowerCase() === ActiveClass.classNow.toLowerCase()
     );
     
-    // Map backend camelCase fields to frontend snake_case
+    // Map backend camelCase fields to frontend snake_case and include teacher
     return matchedClasses.map((cls: any) => ({
       ...cls,
       id: cls._id || cls.id,
@@ -266,6 +292,8 @@ const Tuition: React.FC = () => {
       school_bus: cls.schoolBus || 0,
       library_fee: cls.libraryFee || 0,
       extra_activities: cls.extraActivities || 0,
+      teacher: cls.teacher?._id || cls.teacher || "",
+      teacherName: cls.teacher ? `${cls.teacher.firstName || ''} ${cls.teacher.lastName || ''}` : "",
       // Calculate totals
       total_starterpack: (cls.uniform || 0) + (cls.sportWear || 0) + (cls.schoolBus || 0) + (cls.snack || 0),
       total_others: (cls.science || 0) + (cls.games || 0) + (cls.libraryFee || 0) + (cls.extraActivities || 0),
@@ -294,6 +322,7 @@ const Tuition: React.FC = () => {
         libraryFee: classFee.library_fee || 0,
         extraActivities: classFee.extra_activities || 0,
         starterPack: classFee.starterPack || 0,
+        teacher: classFee.teacher || "",
       });
     }
   }, [classFee]);
@@ -324,10 +353,17 @@ const Tuition: React.FC = () => {
       showErrorToast('No class selected');
       return;
     }
-    
+
+    // include teacher field even if empty to unset
+    const payload = { ...editFormData };
+    if (payload.teacher === "") {
+      // remove teacher key to avoid overriding with empty string
+      delete payload.teacher;
+    }
+
     updateClassMutation.mutate({
       id: classFee.id,
-      updateData: editFormData,
+      updateData: payload,
     });
   };
   
@@ -449,6 +485,11 @@ const Tuition: React.FC = () => {
                   {/* {classes[5]?.charAt(0).toUpperCase() +
                     classes[5]?.slice(1).toLowerCase()} */}
                   {ActiveClass.classNow}
+                  {classFee.teacherName && (
+                    <span className="ml-2 text-sm text-gray-600">
+                      ({classFee.teacherName})
+                    </span>
+                  )}
                 </button>
                 <div
                   className={`tuition-class-fees-overview-body-class-selector ${
@@ -522,6 +563,29 @@ const Tuition: React.FC = () => {
                       )}
                     </div>
                     
+                    {/* teacher assignment */}
+                    <div className="fees-entries mb-[20px] font-Poppins text-[15px] font-medium xl:font-normal leading-[22.5px] md:leading-[16.5px]">
+                      <div>Class Teacher:</div>
+                      {isEditMode ? (
+                        <select
+                          value={editFormData.teacher || ''}
+                          onChange={(e) => setEditFormData((prev:any) => ({ ...prev, teacher: e.target.value }))}
+                          className="border border-gray-300 rounded px-2 py-1 w-full"
+                          disabled={isStaffLoading}
+                        >
+                          <option value="">-- none --</option>
+                          {isStaffLoading ? (
+                            <option disabled>Loading...</option>
+                          ) : (
+                            teachers.map((t: any) => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))
+                          )}
+                        </select>
+                      ) : (
+                        <div>{classFee.teacherName || 'Not assigned'}</div>
+                      )}
+                    </div>
                     <div className="fees-entries mb-[20px] font-Poppins text-[15px] font-medium xl:font-normal leading-[22.5px] md:leading-[16.5px]">
                       <div>School Fees:</div>
                       {isEditMode ? (
