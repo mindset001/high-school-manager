@@ -1,6 +1,5 @@
 // import apiClient from "./apiClient";
 
-import { getUser } from "../../../utils/authTokens";
 import apiClient from "../apiClient";
 
 export const getBaseClass = () => {
