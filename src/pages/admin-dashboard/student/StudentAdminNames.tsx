@@ -8,7 +8,7 @@ import {
   useParams,
 } from "react-router-dom";
 import useClasses from "../../../hooks/useClasses";
-import { getClassStudentsId, getPaymentsByClass, getBaseClass } from "../../../services/api/calls/getApis";
+import { getClassStudentsId, getPaymentsByClass, getBaseClass, getStaff } from "../../../services/api/calls/getApis";
 import { calculateAge } from "../../../utils/regex";
 import {
   Add,
@@ -23,7 +23,7 @@ import Loader from "../../../shared/Loader";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { createPayment } from "../../../services/api/calls/postApis";
-import { getUser } from "../../../utils/authTokens";
+import { getUser, getRole } from "../../../utils/authTokens";
 
 // import useClasses from "../../hooks/useClasses";
 // import { getClassStudentsId } from "../../services/api/calls/getApis";
@@ -223,7 +223,28 @@ const StudentAdminNames: React.FC = () => {
   //   "primary 5",
   // ]);
   // GETTING CLASS Data
-  const { classNameData: classes, isClassLoading, isClassError } = useClasses();
+  const { classNameData: allClasses, isClassLoading, isClassError } = useClasses();
+
+  // if the current user is a staff teacher we will restrict classes to those they belong to
+  const { data: myStaffData } = useQuery({
+    queryKey: ['myStaff'],
+    queryFn: () => getStaff(),
+    enabled: getRole() === 'staff',
+  });
+
+  const teacherClassIds: string[] = useMemo(() => {
+    if (getRole() !== 'staff' || !myStaffData?.data?.staff) return [];
+    const s: any = myStaffData.data.staff;
+    return Array.isArray(s.classes) ? s.classes : [];
+  }, [myStaffData]);
+
+  const classes = useMemo(() => {
+    if (getRole() === 'staff' && teacherClassIds.length > 0) {
+      return allClasses.filter((c) => teacherClassIds.includes(c.id));
+    }
+    return allClasses;
+  }, [allClasses, teacherClassIds]);
+
   //Ends
   const { id } = useParams();
   // const ID: number = Number(id);
@@ -247,6 +268,18 @@ const StudentAdminNames: React.FC = () => {
       ""
     );
   }, [classes, location.pathname]);
+
+  // if staff and only one class, automatically navigate there when not already on it
+  useEffect(() => {
+    if (
+      getRole() === 'staff' &&
+      classes.length === 1 &&
+      className === '' &&
+      classes[0].name
+    ) {
+      navigate(`/student/${encodeURIComponent(classes[0].name.toLowerCase())}`);
+    }
+  }, [classes, className, navigate]);
 
   // const className = useLocation()
   //   .pathname.split("/")

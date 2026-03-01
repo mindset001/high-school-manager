@@ -75,8 +75,8 @@ export const getStaffs = () => {
 };
 
 export const getStaff = () => {
-  const user = getUser();
-  return apiClient.get(`staff/${user.id}`);
+  // fetch the profile of currently authenticated staff user
+  return apiClient.get(`staff/me`);
 };
 
 export const getStaffByClass = (className: string) => {

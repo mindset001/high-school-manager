@@ -35,6 +35,30 @@ export const getStaffById = async (req: AuthRequest, res: Response): Promise<voi
   }
 };
 
+// new helper: return profile for the authenticated staff user
+export const getMyStaffProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId; // our AuthRequest defines userId
+    if (!userId) {
+      res.status(400).json({ message: 'User id missing from token' });
+      return;
+    }
+
+    const staff = await Staff.findOne({ userId })
+      .populate('userId', 'firstName lastName email phoneNumber profileImage');
+
+    if (!staff) {
+      res.status(404).json({ message: 'Staff profile not found' });
+      return;
+    }
+
+    res.json({ staff });
+  } catch (error: any) {
+    console.error('Error fetching own staff profile:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 export const createStaff = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     console.log('Creating staff with data:', req.body);

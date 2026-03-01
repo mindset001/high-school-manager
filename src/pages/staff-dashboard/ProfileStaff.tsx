@@ -45,15 +45,39 @@ const { data, isError, error, isLoading } = useQuery({
   queryKey: ["user"],
   queryFn: () => getStaff(),
 });
-const staff: IProfile = useMemo(
-  () => (data && data.data.data) || [],
-  [data]
-);
-// CONSOLE LOGGING ERROR IF REQUEST FAILS
-isError && console.log(error);
-  // const toggleStudentFn: (index: number) => void = (index) => {
-  //   setStudentIndex(index);
-  // };
+
+// Backend returns { staff: {...} }
+const staff: IProfile = useMemo(() => {
+  if (!data || !data.data || !data.data.staff) return {} as IProfile;
+  const s: any = data.data.staff; // raw response
+  return {
+    id: s._id || s.id,
+    first_name: s.userId?.firstName || '',
+    last_name: s.userId?.lastName || '',
+    middle_name: s.middleName || '',
+    gender: s.gender || '',
+    date_of_birth: s.dateOfBirth ? new Date(s.dateOfBirth).toISOString().split('T')[0] : '',
+    homeAddress: s.address || '',
+    stateOfOrigin: s.stateOfOrigin || '',
+    homeTown: s.homeTown || '',
+    qualification: Array.isArray(s.qualification) ? s.qualification.join(', ') : s.qualification || '',
+    country: s.country || '',
+    subject: Array.isArray(s.subjects) ? s.subjects.join(', ') : s.department || '',
+    classTeacher: Array.isArray(s.classes) ? s.classes.join(', ') : '',
+    age: s.age ? s.age.toString() : '',
+    image: s.userId?.profileImage || '',
+    phone_number: s.userId?.phoneNumber || '',
+    email: s.userId?.email || '',
+  } as IProfile;
+}, [data]);
+
+// log fetch issues
+if (isError) console.error('Error loading staff profile', error);
+
+// ensure loading state displays loader
+if (isLoading) {
+  return <Loader />;
+}
 
   const profileProps = Object.keys(staff) as Array<keyof IProfile>;
   console.log(profileProps)

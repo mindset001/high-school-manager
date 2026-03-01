@@ -59,7 +59,8 @@ const SideNav: React.FC<SideNavProps> = ({ mobileToggle, setMobileToggle }) => {
       item: <SubjectsSVG />,
       to: "subjects",
       text: "Subjects",
-      roles: ["admin", "staff"],
+      // only admins should see subject management
+      roles: ["admin"],
     },
     {
       item: <CalendarSVG />,
