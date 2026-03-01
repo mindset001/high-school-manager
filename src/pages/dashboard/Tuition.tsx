@@ -17,7 +17,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Loader from "../../shared/Loader";
 // import { getBaseClass } from "../../services/api/calls/getBaseClass";
 import { baseClassInterface } from "../../types/user.type";
-import { getBaseClass, getClassStat } from "../../services/api/calls/getApis";
+import { getBaseClass, getClassStat, getStaffs } from "../../services/api/calls/getApis";
 import { updateClass } from "../../services/api/calls/updateApis";
 import ToastNotification, { showSuccessToast, showErrorToast } from "../../shared/ToastNotification";
 
@@ -67,6 +67,10 @@ const Tuition: React.FC = () => {
     queryKey: ['staffs'],
     queryFn: () => getStaffs(),
   });
+
+  useEffect(() => {
+    if (isStaffError) console.error('Error fetching staff list');
+  }, [isStaffError]);
 
   const teachers = useMemo(() => {
     if (!staffListData || !staffListData.data) return [];
