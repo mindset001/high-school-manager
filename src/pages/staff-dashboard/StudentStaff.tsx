@@ -1,9 +1,9 @@
 import React from "react";
-import ProfileStaff from "./ProfileStaff";
+import StudentAdminOverview from "../admin-dashboard/student/StudentAdminOverview";
 
-// Staff users navigating to their dashboard should see their profile details
 const StudentStaff: React.FC = () => {
-  return <ProfileStaff />;
+  // delegate entirely to admin view; it already handles staff behavior
+  return <StudentAdminOverview />;
 };
 
 export default StudentStaff;

@@ -62,7 +62,7 @@ const Calendar = lazy(() => import("./pages/dashboard/Calendar"));
 const Subjects = lazy(() => import("./pages/dashboard/Subjects"));
 // const Attendance = lazy(() => import("./pages/dashboard/Attendance"));
 const ResultsLayout = lazy(() => import("./layouts/role/ResultsLayout"));
-// const Chat = lazy(() => import("./pages/dashboard/Chat"));
+const Chat = lazy(() => import("./pages/dashboard/Chat"));
 // const Certificates = lazy(() => import("./pages/dashboard/Certificates"));
 const ErrorPage = lazy(() => import("./shared/ErrorPage"));
 const StudentAdminLayout = lazy(() => import("./layouts/StudentAdminLayout"));
@@ -153,7 +153,7 @@ function App() {
                 <Route index element={<ResultNamesMobile />} />
               </Route>
             </Route>
-            {/* <Route path="chat" element={<Chat />} /> */}
+            <Route path="chat" element={<Chat />} />
             {/* <Route path="certificates" element={<Certificates />} /> */}
           </Route>
         </Route>

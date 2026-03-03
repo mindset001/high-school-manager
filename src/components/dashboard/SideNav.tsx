@@ -10,7 +10,7 @@ import TimetableSVG from "../svg/dashboard navbar svg/TimetableSVG";
 import SubjectsSVG from "../svg/dashboard navbar svg/SubjectsSVG";
 // import AttendanceSVG from "../svg/dashboard navbar svg/AttendanceSVG";
 import ResultsSVG from "../svg/dashboard navbar svg/ResultsSVG";
-// import ChatSVG from "../svg/dashboard navbar svg/ChatSVG";
+import ChatSVG from "../svg/dashboard navbar svg/ChatSVG";
 // import CertsAwardsSVG from "../svg/dashboard navbar svg/CertsAwardsSVG";
 import DropdownSVG from "../svg/dashboard navbar svg/DropdownSVG";
 import {
@@ -25,6 +25,9 @@ interface SideNavProps {
 }
 const SideNav: React.FC<SideNavProps> = ({ mobileToggle, setMobileToggle }) => {
   const navigate = useNavigate();
+  // determine user role early so it can influence navigation items
+  const role = getRole();
+
   const navs: {
     item: ReactNode;
     to: string;
@@ -45,7 +48,8 @@ const SideNav: React.FC<SideNavProps> = ({ mobileToggle, setMobileToggle }) => {
     },
     {
       item: <GuardianSVG />,
-      to: "student",
+      // for staff users the “Student” nav should actually point at results
+      to: role === "staff" ? "results" : "student",
       text: "Student",
       roles: ["admin", "staff"],
     },
@@ -66,6 +70,12 @@ const SideNav: React.FC<SideNavProps> = ({ mobileToggle, setMobileToggle }) => {
       item: <CalendarSVG />,
       to: "calendar",
       text: "Calendar",
+      roles: ["admin", "staff", "guardian"],
+    },
+    {
+      item: <ChatSVG />, // chat icon already imported earlier if needed
+      to: "chat",
+      text: "Chat",
       roles: ["admin", "staff", "guardian"],
     },
     {
@@ -90,7 +100,7 @@ const SideNav: React.FC<SideNavProps> = ({ mobileToggle, setMobileToggle }) => {
       item: <ResultsSVG />,
       to: "results",
       text: "Results",
-      roles: ["admin", "staff"],
+      roles: ["admin"], // only admins should see results link now
     },
     // {
     //   item: <ChatSVG />,
@@ -105,8 +115,6 @@ const SideNav: React.FC<SideNavProps> = ({ mobileToggle, setMobileToggle }) => {
     //   roles: ["admin", "staff", "guardian"],
     // },
   ];
-  // CHANGE ROLE
-  const role = getRole();
 
   console.log(role);
   return (

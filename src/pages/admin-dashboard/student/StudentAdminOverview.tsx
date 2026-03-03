@@ -8,9 +8,10 @@ import {
 import GuardianSVG from "../../../components/svg/GuardianSVG";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getClassStatId } from "../../../services/api/calls/getApis";
+import { getClassStatId, getStaff, getClassStudentsId } from "../../../services/api/calls/getApis";
 import Loader from "../../../shared/Loader";
 import useClasses from "../../../hooks/useClasses";
+import { getRole } from "../../../utils/authTokens";
 
 // interface classesInterface {
 //   id: number;
@@ -45,6 +46,34 @@ const StudentAdminOverview: React.FC = () => {
     });
   // GETTING CLASS Data
   const { classNameData, isClassError, isClassLoading } = useClasses();
+
+  // if the logged in user is a teacher, fetch their staff profile to
+  // determine assigned class(es)
+  const role = getRole() as string;
+  const navigate = useNavigate();
+
+  const { data: staffData } = useQuery({
+    queryKey: ["myStaff"],
+    queryFn: getStaff,
+    enabled: role.toLowerCase() === "staff",
+    retry: 2,
+  });
+
+  // if teacher has classes, pre-select first one; no redirect needed
+  useEffect(() => {
+    if (
+      role.toLowerCase() === "staff" &&
+      !studentDropDown.id &&
+      staffData?.data?.staff?.classes?.length &&
+      classNameData.length > 0
+    ) {
+      const className = staffData.data.staff.classes[0];
+      const cls = classNameData.find((c) => c.name === className);
+      if (cls) {
+        setStudentDropDown({ class: cls.name, id: cls.id });
+      }
+    }
+  }, [role, staffData, classNameData, studentDropDown.id]);
   // const {
   //   data: classData,
   //   isError: isClassError,
@@ -89,6 +118,63 @@ const StudentAdminOverview: React.FC = () => {
     queryFn: () => getClassStatId(studentDropDown.id),
     enabled: studentDropDown.id !== "",
   });
+
+  // optional: fetch list of students in current class
+  const {
+    data: classStudentsData,
+    isError: isClassStudentsError,
+    isLoading: isClassStudentsLoading,
+  } = useQuery({
+    queryKey: ["classStudents", studentDropDown.id],
+    queryFn: () => getClassStudentsId(studentDropDown.id),
+    enabled: studentDropDown.id !== "",
+    retry: 2,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  interface classStudentIdI {
+    id: number;
+    student_class: string;
+    guardian_email: string;
+    first_name: string;
+    last_name: string;
+    middle_name: string;
+    // optional camelCase variants
+    firstName?: string;
+    lastName?: string;
+    middleName?: string;
+    image: string;
+    date_of_birth: string;
+    gender: string;
+    tuition_paid: number;
+    tuition_balance: number;
+    fathers_name: string;
+    mothers_name: string;
+    fathers_contact: string;
+    mothers_contact: string;
+    fathers_occupation: string;
+    mothers_occupation: string;
+    home_address: string;
+    state_of_origin: string;
+    home_town: string;
+    country: string;
+    starter_pack_collected: boolean;
+    religion: string;
+    total_tuition_paid: number;
+    schoolclass: number;
+    guardian: number;
+  }
+
+  const classStudents: classStudentIdI[] = useMemo(() => {
+    if (
+      !classStudentsData ||
+      !classStudentsData.data ||
+      !Array.isArray(classStudentsData.data.students)
+    ) {
+      return [];
+    }
+    return classStudentsData.data.students;
+  }, [classStudentsData]);
   interface classStatsInterface {
     id: number;
     class: string;
@@ -163,12 +249,42 @@ const StudentAdminOverview: React.FC = () => {
     total,
   ]);
 
-  const navigate = useNavigate();
+  // navigate is used above for staff redirect
+  // const navigate = useNavigate();
   return (
     <div className="student-overview">
       <div className="student-overview-header">Students</div>
       <div className="student-overview-class-container flex-grow">
-        {isClassLoading ? (
+        {role.toLowerCase() === "staff" &&
+          staffData?.data?.staff &&
+          Array.isArray(staffData.data.staff.classes) &&
+          staffData.data.staff.classes.length === 0 && (
+            <div className="text-center text-gray-500 w-full py-4">
+              Teacher is not a class teacher
+            </div>
+          )}
+        {/* if staff, hide class tiles and instead show student list for pre-selected class */}
+        {role.toLowerCase() === "staff" &&
+        staffData?.data?.staff?.classes?.length > 0 ? (
+          // we rely on studentDropDown being set via effect above
+          <div className="w-full">
+            {isClassStudentsLoading ? (
+              <Loader />
+            ) : isClassStudentsError ? (
+              <div className="text-center text-red-500">Error loading students</div>
+            ) : classStudents.length === 0 ? (
+              <div className="text-center">No students in your class.</div>
+            ) : (
+              <ul className="divide-y">
+                {classStudents.map((s, idx) => (
+                  <li key={idx} className="py-2">
+                    {s.last_name || ""} {s.first_name || ""} {s.middle_name || ""}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : isClassLoading ? (
           <div className=" font-Lora text-center min-h-[152px] flex flex-row justify-center items-center w-full">
             <Loader />
           </div>
@@ -320,6 +436,36 @@ const StudentAdminOverview: React.FC = () => {
                           </div>
                         </div>
                       )}
+                      {/* show student list below stats when a class is selected */}
+                      {studentDropDown.id && (
+                        <div className="mt-4">
+                          {isClassStudentsLoading ? (
+                            <div className="font-Lora text-center">
+                              <Loader />
+                            </div>
+                          ) : isClassStudentsError ? (
+                            <div className="font-Lora text-center text-red-500">
+                              Error loading students
+                            </div>
+                          ) : classStudents.length > 0 ? (
+                            <div>
+                              <div className="font-bold mb-2">Students</div>
+                              <ul className="list-disc list-inside text-sm max-h-[120px] overflow-y-auto">
+                                {classStudents.map((s) => (
+                                  <li key={s.id} className="py-1">
+                                    {s.last_name || s['lastName'] || ""} {s.first_name || s['firstName'] || ""} {s.middle_name || s['middleName'] || ""}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : (
+                            <div className="text-center text-gray-500 text-sm">
+                              No students in this class.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <Link
                         to={classdata.name.toLowerCase()}
                         className="content-center right-0 bottom-[-37px] absolute p-2 rounded-full size-[30px] bg-[#05878F]"

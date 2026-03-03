@@ -101,3 +101,12 @@ export const getPaymentsByStudent = (studentId: string | number) => {
 export const getPaymentsByClass = (classId: string | number) => {
   return apiClient.get(`payments/class/${classId}`);
 };
+
+// CHAT APIs
+export const getChatMessages = () => {
+  return apiClient.get(`chat/messages`);
+};
+
+export const postChatMessage = (text: string) => {
+  return apiClient.post(`chat/message`, { text });
+};
