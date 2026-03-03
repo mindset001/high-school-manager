@@ -87,8 +87,10 @@ const DashboardLayout: React.FC = () => {
                 setToggleProfile(!toggleProfile);
               }}
             >
+              {/* use authenticated user profile image; guardianWard no longer
+                  contains the guardian's own info */}
               <img
-                src={guardianWard.image || profileImage}
+                src={user.profileImage || profileImage}
                 alt={`${user.lastName} ${user.firstName}`}
                 onError={(e) => (e.currentTarget.src = profileImage)}
               />
@@ -177,7 +179,7 @@ const DashboardLayout: React.FC = () => {
               >
                 <div className="rounded-full border-[#05878F] border-[3px] border-solid size-[44px] 2xl:size-[55px] overflow-hidden">
                   <img
-                    src={guardianWard.image || profileImage}
+                    src={user.profileImage || profileImage}
                     alt={`${user.lastName} ${user.firstName}`}
                     onError={(e) => (e.currentTarget.src = profileImage)}
                   />

@@ -67,23 +67,26 @@ export interface totalPercentageValueI {
 }
 
 export interface userGuardWardDataI {
-  email: string;
-  first_name: string;
-  id: number;
-  image: string;
-  last_name: string;
-  phone: string;
-  students: WardData[];
-  user: number;
+  /** optional guardian profile image or avatar URL */
+  image?: string;
+  /** list of wards returned by the API */
+  students?: WardData[];
+  // additional fields may be added here if the backend is extended
 }
 
 interface WardData {
   id: number;
-  first_name: string;
-  last_name: string;
-  middle_name: string;
-  student_class: string;
-  student_class_id: number;
+  // API sometimes returns snake_case or camelCase depending on endpoint/version
+  first_name?: string;
+  last_name?: string;
+  middle_name?: string;
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
+  student_class?: string;
+  student_class_id?: number;
+  studentClass?: string;
+  studentClassId?: number;
 }
 
 export interface guardianWardInterface {

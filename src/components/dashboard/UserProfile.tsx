@@ -109,34 +109,36 @@ const UserProfile: React.FC<Props> = ({
                 <div className=" font-Lora text-center w-full font-bold min-h-[152px] flex flex-row justify-center items-center">
                   <span>Error fetching data</span>
                 </div>
-              ) : Array.isArray(guardianWard.students) &&
-                guardianWard.students.length > 0 ? (
-                guardianWard.students.map((wards, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      // alert(wards.student_class_id);
-                      setGuardianActiveClassID(wards.student_class_id);
-                      // setActiveClassID(wards.student_class_id);
-                      setGuardianActiveStudentID((prev) => ({
-                        ...prev,
-                        id: wards.id,
-                        isUserLoading: isGuardianWardLoading ? true : false,
-                      }));
-                      setToggleProfile(false);
-                    }}
-                    className="border-solid border-black p-[6px] border rounded-md my-1 hover:bg-slate-500 hover:text-white hover:border-slate-500"
-                  >{`${wards.last_name} ${wards.first_name} ${wards.middle_name}`}</button>
-                ))
               ) : (
-                <div className="font-Lora text-center my-[10px] lg:my-[15px] text-[15px] md:text-base">
-                  Data Not Available
-                </div>
+                // normalize to array in case hook ever returns undefined
+                (Array.isArray(guardianWard.students) ? guardianWard.students : []).length > 0 ? (
+                  (guardianWard.students || []).map((wards, index) => {
+                    const first = wards.firstName || wards.first_name || '';
+                    const last = wards.lastName || wards.last_name || '';
+                    const middle = wards.middleName || wards.middle_name || '';
+                    const classId = wards.student_class_id ?? wards.studentClassId;
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setGuardianActiveClassID(classId);
+                          setGuardianActiveStudentID((prev) => ({
+                            ...prev,
+                            id: wards.id,
+                            isUserLoading: isGuardianWardLoading ? true : false,
+                          }));
+                          setToggleProfile(false);
+                        }}
+                        className="border-solid border-black p-[6px] border rounded-md my-1 hover:bg-slate-500 hover:text-white hover:border-slate-500"
+                      >{`${last} ${first} ${middle}`}</button>
+                    );
+                  })
+                ) : (
+                  <div className="font-Lora text-center my-[10px] lg:my-[15px] text-[15px] md:text-base">
+                    Data Not Available
+                  </div>
+                )
               )}
-              {/* Demo */}
-              {/* <div>Yakub Adebare</div>
-              <div>Hammed Bello</div>
-              <div>Shittu Moshood Ademola</div> */}
             </div>
           </div>
         </div>

@@ -32,11 +32,25 @@ const useGuardianWard = () => {
   });
 
   const guardianWard : userGuardWardDataI = useMemo(() => {
+    // make sure the hook returns an object with a `students` array so
+    // components can consistently access `guardianWard.students`
     if (!guardianWardData || !guardianWardData.data) {
-      return [];
+      return { students: [] };
     }
-    // Backend returns { wards: [...] }
-    return guardianWardData.data.wards || [];
+    const rawWards: any[] = guardianWardData.data.wards || [];
+    // map backend student objects into the simpler shape the UI expects
+    const students = rawWards.map((s) => {
+      const user = s.userId || {};
+      return {
+        id: s._id || s.id || 0,
+        firstName: user.firstName || s.first_name || '',
+        lastName: user.lastName || s.last_name || '',
+        middleName: user.middleName || s.middle_name || '',
+        studentClass: s.class || s.student_class || '',
+        studentClassId: s.class || s.student_class_id || '',
+      };
+    });
+    return { students };
   }, [guardianWardData]);
   
   useEffect(() => {
