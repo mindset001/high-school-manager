@@ -41,7 +41,8 @@ const UserProfile: React.FC<Props> = ({
       guardianWard.students.length > 0
     ) {
       const { student_class_id, id } = guardianWard.students[0];
-      setGuardianActiveClassID(student_class_id);
+      // guard against undefined by defaulting to 0
+      setGuardianActiveClassID(student_class_id ?? 0);
       setGuardianActiveStudentID((prev) => ({
         ...prev,
         id: id,
@@ -121,7 +122,7 @@ const UserProfile: React.FC<Props> = ({
                       <button
                         key={index}
                         onClick={() => {
-                          setGuardianActiveClassID(classId);
+                          setGuardianActiveClassID(classId ?? 0);
                           setGuardianActiveStudentID((prev) => ({
                             ...prev,
                             id: wards.id,

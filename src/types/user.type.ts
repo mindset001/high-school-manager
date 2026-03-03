@@ -9,6 +9,8 @@ export interface UserInterface {
   username: string;
   email: string;
   is_active: boolean;
+  /** optional profile image URL for header/avatar */
+  profileImage?: string;
 }
 
 export interface IProfile {
