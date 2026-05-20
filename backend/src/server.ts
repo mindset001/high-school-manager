@@ -27,6 +27,7 @@ import attendanceRoutes from './routes/attendanceRoutes.js';
 import resultRoutes from './routes/resultRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import testRoutes from './routes/testRoutes.js';
+import quizRoutes from './routes/quizRoutes.js';
 
 const app: Application = express();
 
@@ -115,6 +116,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api', resultRoutes);
 app.use('/api', analyticsRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/quizzes', quizRoutes);
 console.log('Routes registered successfully');
 
 // Error handler (must be last)

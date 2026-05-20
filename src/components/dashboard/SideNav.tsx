@@ -11,6 +11,7 @@ import SubjectsSVG from "../svg/dashboard navbar svg/SubjectsSVG";
 import AttendanceSVG from "../svg/dashboard navbar svg/AttendanceSVG";
 import ResultsSVG from "../svg/dashboard navbar svg/ResultsSVG";
 import ChatSVG from "../svg/dashboard navbar svg/ChatSVG";
+import QuizSVG from "../svg/dashboard navbar svg/CertsAwardsSVG";
 // import CertsAwardsSVG from "../svg/dashboard navbar svg/CertsAwardsSVG";
 import DropdownSVG from "../svg/dashboard navbar svg/DropdownSVG";
 import {
@@ -101,6 +102,12 @@ const SideNav: React.FC<SideNavProps> = ({ mobileToggle, setMobileToggle }) => {
       to: "results",
       text: "Results",
       roles: ["admin"], // only admins should see results link now
+    },
+    {
+      item: <QuizSVG />,
+      to: "quizzes",
+      text: "CBT / Quizzes",
+      roles: ["admin", "staff"],
     },
     // {
     //   item: <ChatSVG />,

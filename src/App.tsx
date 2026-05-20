@@ -65,7 +65,9 @@ const ResultsLayout = lazy(() => import("./layouts/role/ResultsLayout"));
 const Chat = lazy(() => import("./pages/dashboard/Chat"));
 // const Certificates = lazy(() => import("./pages/dashboard/Certificates"));
 const ErrorPage = lazy(() => import("./shared/ErrorPage"));
+const Quizzes = lazy(() => import("./pages/dashboard/Quizzes"));
 const StudentAdminLayout = lazy(() => import("./layouts/StudentAdminLayout"));
+const TakeQuiz = lazy(() => import("./pages/guardian-dashboard/TakeQuiz"));
 const StudentAdminOverview = lazy(
   () => import("./pages/admin-dashboard/student/StudentAdminOverview")
 );
@@ -148,6 +150,8 @@ function App() {
             <Route path="guardian-result/:id" element={<ResultGuardian />} />
             <Route path="attendance" element={<AttendanceLayout />} />
             <Route path="chat" element={<Chat />} />
+            <Route path="quizzes" element={<Quizzes />} />
+            <Route path="eportal/quiz/:id" element={<TakeQuiz />} />
             <Route path="assignments" element={<Assignments />} />
             <Route path="eportal" element={<EPortal />} />
             {/* {role === "admin" || role === "guardian" ? (
