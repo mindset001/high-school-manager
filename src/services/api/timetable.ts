@@ -49,7 +49,7 @@ export const useSaveTimetable = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: saveTimetable,
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['timetable', variables.className] });
     },
   });

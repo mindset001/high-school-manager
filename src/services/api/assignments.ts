@@ -79,7 +79,7 @@ export const useSubmitAssignment = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: submitAssignment,
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['submission'] });
     },
   });
@@ -89,7 +89,7 @@ export const useGradeSubmission = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: gradeSubmission,
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['submissions'] });
     },
   });

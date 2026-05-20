@@ -4,7 +4,7 @@ import { useQuizzes, useStudentQuizAttempts } from "../../services/api/quizzes";
 import Loader from "../../shared/Loader";
 import { toast } from "react-toastify";
 import { getUser } from "../../utils/authTokens";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import moment from "moment";
 
 const EPortal: React.FC = () => {
@@ -12,7 +12,7 @@ const EPortal: React.FC = () => {
   const navigate = useNavigate();
   const loggedInStudentIdStr = guardian?.email?.toUpperCase(); // e.g. HSM001
   
-  const [studentClass, setStudentClass] = useState("JSS 1"); 
+  const [studentClass] = useState("JSS 1"); 
   const [activeTab, setActiveTab] = useState<'assignments' | 'quizzes'>('assignments');
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);

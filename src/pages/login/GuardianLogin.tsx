@@ -3,9 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   commonPasswordsImport,
-  consecutiveDotsRegexImport,
   emailRegexImport,
-  invalidEmailCharRegexImport,
   specialCharRegexImport,
 } from "../../utils/regex";
 import { Warning } from "../../assets/images";
@@ -40,8 +38,8 @@ const StaffLogin: React.FC = () => {
   //   const sqlInjectionRegex = sqlInjectionRegexImport;
   // const invalidFullnameCharRegex = invalidFullnameCharRegexImport;
   const emailRegex = emailRegexImport;
-  const invalidEmailCharRegex = invalidEmailCharRegexImport;
-  const consecutiveDotsRegex = consecutiveDotsRegexImport;
+  // const invalidEmailCharRegex = invalidEmailCharRegexImport;
+  // const consecutiveDotsRegex = consecutiveDotsRegexImport;
   const commonPasswords = commonPasswordsImport;
 
   ///////////////////////

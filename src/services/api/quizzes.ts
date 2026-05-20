@@ -94,7 +94,7 @@ export const useSubmitQuiz = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: { id: string, attemptData: any }) => submitQuiz(data.id, data.attemptData),
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['quizAttempts', variables.attemptData.studentId] });
       queryClient.invalidateQueries({ queryKey: ['quizSubmissions', variables.id] });
     },

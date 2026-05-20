@@ -11,7 +11,7 @@ const TimetableGuardian: React.FC = () => {
 
   // In a real scenario, we'd fetch the student's class from their profile. 
   // For demo purposes, we default to JSS 1.
-  const [studentClass, setStudentClass] = useState("JSS 1"); 
+  const [studentClass] = useState("JSS 1"); 
   const [timetableData, setTimetableData] = useState<IDaySchedule[]>([]);
 
   const { data: fetchedTimetable, isLoading: isLoadingTimetable } = useTimetable(studentClass);

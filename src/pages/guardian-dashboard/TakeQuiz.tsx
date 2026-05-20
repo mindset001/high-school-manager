@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuiz, useSubmitQuiz } from "../../services/api/quizzes";
 import { toast } from "react-toastify";
 import Loader from "../../shared/Loader";
-import moment from "moment";
+// import moment from "moment";
 import { getUser } from "../../utils/authTokens";
 
 const TakeQuiz: React.FC = () => {

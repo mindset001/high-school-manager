@@ -67,7 +67,7 @@ export const useSaveAttendance = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: saveAttendance,
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['attendance', variables.className, variables.date] });
     },
   });
@@ -93,7 +93,7 @@ export const useSaveStaffAttendance = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: saveStaffAttendance,
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['attendance', 'staff', variables.date] });
     },
   });

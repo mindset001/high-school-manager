@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { getBaseClass, getSubjects, getStaffs } from "../../services/api/calls/getApis";
-import { useTimetable, useSaveTimetable, ITimetable, IDaySchedule, IPeriod } from "../../services/api/timetable";
+import { useTimetable, useSaveTimetable, IDaySchedule } from "../../services/api/timetable";
 import Loader from "../../shared/Loader";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
