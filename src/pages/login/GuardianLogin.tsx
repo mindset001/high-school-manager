@@ -55,25 +55,23 @@ const StaffLogin: React.FC = () => {
       value: string;
     };
   }): void => {
-    const isInvalid = !emailRegex.test(e.target.value);
-    const isEmpty = e.target.value.trim() == "" || !e.target.value;
-    const isShort = e.target.value.length <= 1;
-    const hasSpecialChars = invalidEmailCharRegex.test(e.target.value);
-    const hasConsecutiveDots = consecutiveDotsRegex.test(e.target.value);
+    const value = e.target.value.trim();
+    const isEmpty = value === "";
+    const isShort = value.length <= 1;
 
-    isInvalid || isEmpty || isShort || hasSpecialChars || hasConsecutiveDots
+    // Check if it looks like an email or an ID (alphanumeric)
+    const isEmailOrId = emailRegex.test(value) || /^[a-zA-Z0-9]+$/.test(value);
+    const isInvalid = !isEmailOrId && value.length > 0;
+
+    isInvalid || isEmpty || isShort
       ? (setToggleEmailError(true),
         setEmailErrorMessage(
-          isInvalid
-            ? "Enter valid email address"
-            : isEmpty
+          isEmpty
             ? "This field is required"
             : isShort
-            ? "Email address is too short"
-            : hasSpecialChars
-            ? "Email address contains invalid chars"
-            : hasConsecutiveDots
-            ? "Consecutive dots are not allowed"
+            ? "Input is too short"
+            : isInvalid
+            ? "Enter a valid email or Student ID"
             : ""
         ))
       : (setToggleEmailError(false), setEmailErrorMessage(""));
@@ -193,49 +191,20 @@ const StaffLogin: React.FC = () => {
         console.log("Guardian Data", userdata);
       },
       onError: (error: any) => {
-        if (error && !(error as any).response) {
-          console.error("Login failed:", error);
-          toast.error(
-            "An error occured. Check your internet connection and/or login credentials"
-          );
-        }
         setLoading(false);
-
-        // Still working on it
-        if (error && (error as any).response) {
-          if (error.response) {
-            switch (error.response.data.message) {
-              case "Invalid email or password":
-                toast.error("An error occured. Invalid email or password");
-                break;
-              case "You don't have permission to access this page":
-                toast.error("An error occured. Incorrect role details entered");
-                break;
-              case "net::ERR_PROXY_CONNECTION_FAILED":
-                console.error("Check your internet connection");
-                break;
-              case "net::ERR_TIMED_OUT":
-                console.error("Timeout error");
-                break;
-              default:
-            }
-          } else {
-            console.error("Error occurred: ", error.message);
-            toast.error(
-              "An error occured. Check your internet connection and/or login credentials"
-            );
-          }
-          // console.error("Error occurred: ", error.message);
-          // toast.error(
-          //   "An error occured. Check your internet connection and/or login credentials"
-          // );
+        console.error("Login failed:", error);
+        
+        if (error?.response?.data?.message) {
+          // Display the exact error message from the backend
+          toast.error(error.response.data.message);
+        } else if (error?.message) {
+          // Fallback to axios/network error message
+          toast.error(error.message === 'Network Error' 
+            ? "Unable to connect to server. Please check your connection." 
+            : error.message);
         } else {
-          console.error("An unknown error occurred");
-          toast.error(
-            "An error occured. Check your internet connection and/or login credentials"
-          );
+          toast.error("An unknown error occurred");
         }
-        // Ends here
       },
     });
     ////////////////////////////////////////////////
@@ -258,12 +227,12 @@ const StaffLogin: React.FC = () => {
     >
       <div className="flex flex-col mb-[5px]">
         <label htmlFor="email" className="font-Lora text-[15px] font-medium">
-          Email address
+          Student ID or Email
         </label>
         <div className="relative w-full rounded-md mt-1 h-[41px]">
           <input
-            type="email"
-            placeholder="Enter email address"
+            type="text"
+            placeholder="e.g. HSM001 or email@example.com"
             name="email"
             id="email"
             className={`w-full h-full border-2 border-solid rounded-[15px] py-[5px] pl-3 pr-[40px] outline-none font-Poppins text-[15px]

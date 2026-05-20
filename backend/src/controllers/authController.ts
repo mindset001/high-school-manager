@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { User } from '../models/User.js';
+import { Student } from '../models/Student.js';
+import { Guardian } from '../models/Guardian.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 
@@ -51,9 +53,21 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     console.log('Login attempt:', { email, password: password ? '[PROVIDED]' : '[MISSING]' });
 
     // Find user (case insensitive email)
-    const user = await User.findOne({ email: email.toLowerCase() });
+    let user = await User.findOne({ email: email.toLowerCase() });
+    
+    // If user not found by email, check if it's a student ID
     if (!user) {
-      console.log('User not found with email:', email.toLowerCase());
+      const student = await Student.findOne({ studentId: email.toUpperCase() });
+      if (student && student.guardianId) {
+        const guardian = await Guardian.findById(student.guardianId);
+        if (guardian) {
+          user = await User.findById(guardian.userId);
+        }
+      }
+    }
+
+    if (!user) {
+      console.log('User not found with email or studentId:', email);
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }

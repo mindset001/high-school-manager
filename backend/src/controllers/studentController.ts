@@ -173,7 +173,7 @@ export const createStudent = async (req: AuthRequest, res: Response): Promise<vo
       
       if (!guardianUser) {
         // Create guardian user account
-        const guardianTempPassword = 'Guardian@123';
+        const guardianTempPassword = 'Students@123';
         const guardianHashedPassword = await bcrypt.hash(guardianTempPassword, 10);
         
         // Split guardian name into first and last name

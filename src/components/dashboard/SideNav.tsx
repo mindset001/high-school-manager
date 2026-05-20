@@ -8,7 +8,7 @@ import CalendarSVG from "../svg/dashboard navbar svg/CalendarSVG";
 import TuitionSVG from "../svg/dashboard navbar svg/TuitionSVG";
 import TimetableSVG from "../svg/dashboard navbar svg/TimetableSVG";
 import SubjectsSVG from "../svg/dashboard navbar svg/SubjectsSVG";
-// import AttendanceSVG from "../svg/dashboard navbar svg/AttendanceSVG";
+import AttendanceSVG from "../svg/dashboard navbar svg/AttendanceSVG";
 import ResultsSVG from "../svg/dashboard navbar svg/ResultsSVG";
 import ChatSVG from "../svg/dashboard navbar svg/ChatSVG";
 // import CertsAwardsSVG from "../svg/dashboard navbar svg/CertsAwardsSVG";
@@ -90,12 +90,12 @@ const SideNav: React.FC<SideNavProps> = ({ mobileToggle, setMobileToggle }) => {
       text: "Timetable",
       roles: ["admin", "staff", "guardian"],
     },
-    // {
-    //   item: <AttendanceSVG />,
-    //   to: "attendance",
-    //   text: "Attendance",
-    //   roles: ["admin", "staff", "guardian"],
-    // },
+    {
+      item: <AttendanceSVG />,
+      to: "attendance",
+      text: "Attendance",
+      roles: ["admin", "staff", "guardian"],
+    },
     {
       item: <ResultsSVG />,
       to: "results",
@@ -114,6 +114,18 @@ const SideNav: React.FC<SideNavProps> = ({ mobileToggle, setMobileToggle }) => {
     //   text: "Certificates",
     //   roles: ["admin", "staff", "guardian"],
     // },
+    {
+      item: <SubjectsSVG />,
+      to: "assignments",
+      text: "Assignments",
+      roles: ["admin", "staff"],
+    },
+    {
+      item: <SubjectsSVG />,
+      to: "eportal",
+      text: "E-Portal",
+      roles: ["guardian"],
+    },
   ];
 
   console.log(role);

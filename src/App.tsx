@@ -60,7 +60,7 @@ const GuardianLogin = lazy(() => import("./pages/login/GuardianLogin"));
 const Overview = lazy(() => import("./pages/dashboard/Overview"));
 const Calendar = lazy(() => import("./pages/dashboard/Calendar"));
 const Subjects = lazy(() => import("./pages/dashboard/Subjects"));
-// const Attendance = lazy(() => import("./pages/dashboard/Attendance"));
+const AttendanceLayout = lazy(() => import("./layouts/role/AttendanceLayout"));
 const ResultsLayout = lazy(() => import("./layouts/role/ResultsLayout"));
 const Chat = lazy(() => import("./pages/dashboard/Chat"));
 // const Certificates = lazy(() => import("./pages/dashboard/Certificates"));
@@ -72,6 +72,9 @@ const StudentAdminOverview = lazy(
 const StudentAdminNames = lazy(
   () => import("./pages/admin-dashboard/student/StudentAdminNames")
 );
+
+const Assignments = lazy(() => import("./pages/dashboard/Assignments"));
+const EPortal = lazy(() => import("./pages/guardian-dashboard/EPortal"));
 const StudentAdminNamesOverviewMobile = lazy(
   () =>
     import("./pages/admin-dashboard/student/StudentAdminNamesOverviewMobile")
@@ -79,8 +82,8 @@ const StudentAdminNamesOverviewMobile = lazy(
 const StudentAdminDatabase = lazy(
   () => import("./pages/admin-dashboard/student/StudentAdminDatabase")
 );
-const TimetablesGuardian = lazy(
-  () => import("./pages/guardian-dashboard/TimetableGuardian")
+const TimetableLayout = lazy(
+  () => import("./layouts/role/TimetableLayout")
 );
 function App() {
   // CHANGE ROLE
@@ -141,9 +144,12 @@ function App() {
             <Route path="tuition" element={<Tuition />} />
           ) : null} */}
             {/* ENDS */}
-            <Route path="timetable" element={<TimetablesGuardian />} />
+            <Route path="timetable" element={<TimetableLayout />} />
             <Route path="guardian-result/:id" element={<ResultGuardian />} />
-            {/* <Route path="attendance" element={<Attendance />} /> */}
+            <Route path="attendance" element={<AttendanceLayout />} />
+            <Route path="chat" element={<Chat />} />
+            <Route path="assignments" element={<Assignments />} />
+            <Route path="eportal" element={<EPortal />} />
             {/* {role === "admin" || role === "guardian" ? (
             <Route path="staff" element={<Staff />} />
           ) : role === "staff" ? null : null} */}

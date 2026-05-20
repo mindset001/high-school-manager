@@ -1,224 +1,102 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useQuery } from "@tanstack/react-query";
-import { MobileHeader } from "./Profile";
+import React, { useState, useEffect } from "react";
+import { useTimetable, IDaySchedule } from "../../services/api/timetable";
 import Loader from "../../shared/Loader";
-import { getAllTimetables } from "../../services/api/calls/getApis";
-import { useMemo } from "react";
+import { getUser } from "../../utils/authTokens";
 
-interface ClassPeriod {
-  [key: string]: string[]; // Dynamic string keys, with the value being an array of strings
-}
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-const daysOfWeek: string[] = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-];
+const TimetableGuardian: React.FC = () => {
+  const guardian = getUser();
+  const loggedInStudentIdStr = guardian?.email?.toUpperCase();
 
-const timePeriods: string[] = [
-  "8:20 am -9:00 am",
-  "9:00 am -9:40 am",
-  "9:40 am -10:20 am",
-  "10:20 am -10:50 am", // Optional breaks can be added manually
-  "10:50 am -11:30 am",
-  "11:30 am -12:10 pm",
-  "12:10 pm -12:50 pm",
-  "12:50 pm -1:00 pm", // Optional breaks can be added manually
-  "1:00 pm -1:40 pm",
-  "1:40 pm -2:20 pm",
-];
+  // In a real scenario, we'd fetch the student's class from their profile. 
+  // For demo purposes, we default to JSS 1.
+  const [studentClass, setStudentClass] = useState("JSS 1"); 
+  const [timetableData, setTimetableData] = useState<IDaySchedule[]>([]);
 
-const TimetablesGuardian = () => {
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["calender"],
-    queryFn: () => getAllTimetables(),
-  });
+  const { data: fetchedTimetable, isLoading: isLoadingTimetable } = useTimetable(studentClass);
 
-  function transformTimetable(backendData: any): ClassPeriod[] {
-    console.log("Fetched data", backendData);
-    const classPeriods: ClassPeriod[] =
-      backendData &&
-      timePeriods.map((timePeriod, index) => {
-        const periodObject: ClassPeriod = {}; // Initialize as ClassPeriod type
-        periodObject[timePeriod] =
-          daysOfWeek &&
-          daysOfWeek.map((day) => {
-            // Find the relevant data for the current day
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const dayData = backendData.find((item: any) => item.days === day);
+  useEffect(() => {
+    if (fetchedTimetable) {
+      setTimetableData(fetchedTimetable.days);
+    } else {
+      setTimetableData([]);
+    }
+  }, [fetchedTimetable]);
 
-            // Based on the index, return the correct period (first_period, second_period, etc.)
-            switch (index) {
-              case 0:
-                return dayData?.first_period || null;
-              case 1:
-                return dayData?.second_period || null;
-              case 2:
-                return dayData?.third_period || null;
-              case 3:
-                return "LUNCH";
-              case 4:
-                return dayData?.fourth_period || null;
-              case 5:
-                return dayData?.fifth_period || null;
-              case 6:
-                return dayData?.eight_period || null;
-              case 7:
-                return "LUNCH";
-              case 8:
-                return dayData?.nineth_period || null;
-              case 9:
-                return dayData?.tenth_period || null;
-              default:
-                return null;
-            }
-          });
-        // console.log("Period Object...", periodObject);
-        return periodObject;
-      });
-    console.log("Class Period...", classPeriods);
-    return classPeriods;
-  }
-
-  const timeTables: any[] = useMemo(() => {
-    if (!data || !data.data || !data.data.data) return []; // Handle undefined cases
-
-    return data.data.data.map((timeTable: any) => ({
-      ...timeTable,
-      timetable: transformTimetable(timeTable.timetable) || [], // Ensure it's an array
-    }));
-  }, [data]);
-
-  console.log("Processed TimeTables:", timeTables);
-
-  //....................................................
-  if (isLoading) {
-    return <Loader />;
-  }
-  if (isError) {
-    return <div className="w-6/6 text-center mt-[20%]">{error.message}</div>;
-  }
   return (
-    <section className=" bg-[linear-gradient(259.46deg,_#05878F_10.76%,_rgba(5,_135,_143,_1)_107.57%)] md:bg-none min-h-[calc(100vh-80px)] md:min-h-0 flex flex-col">
-      <MobileHeader title="Timetable" subtitle="Timetables" />
-
-      <div className="rounded-t-[30px] flex flex-col gap-0 md:gap-5 pt-[20px] md:pt-0 md:mt-[30px] md:px-[30px] bg-white">
-        {!isLoading && !isError && timeTables && timeTables.length > 0 ? (
-          timeTables.map((item, index) => (
-            <Timetable key={index} daysOfWeek={daysOfWeek} timeTable={item} />
-          ))
-        ) : (
-          <div className="w-6/6 text-center mt-[20%]">
-            Timetable is not available at the moment
-          </div>
-        )}
+    <div className="p-4 md:p-8 bg-gray-50 min-h-screen font-Poppins">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-2xl font-bold font-Lora text-[#05878F]">Class Timetable</h1>
+          <p className="text-gray-600 text-sm">Viewing timetable for {loggedInStudentIdStr} ({studentClass})</p>
+        </div>
       </div>
-    </section>
-  );
-};
 
-// Function to map periods for each day
-
-export const Timetable = ({
-  daysOfWeek,
-  timeTable,
-}: {
-  daysOfWeek: DaysOfWeek;
-  timeTable: { id: string; name: string; timetable: any };
-}) => {
-  return (
-    <>
-      {timeTable && (
-        <div className="timetable-section-1">
-          <div className="timetable">
-            <div className="flex flex-col items-center justify-center gap-0.5 md:gap-3">
-              <h4 className="text-clr1 timetable-header block md:hidden">
-                {timeTable.name} Timetable
-              </h4>
-
-              <div className="timetable-header-1-box">
-                <h4 className="timetable-header-1">
-                  {timeTable.name} Timetable
-                </h4>
-              </div>
-
-              <div className="timetable-wrapper-1">
-                <table className="w-full bg-white">
-                  <thead>
-                    <tr>
-                      <th className="table-header">Time</th>
-                      {daysOfWeek &&
-                        daysOfWeek.map((day, index) => (
-                          <th key={index} className="table-header">
-                            {day}
-                          </th>
-                        ))}
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {timeTable?.timetable && timeTable.timetable.length > 0 ? (
-                      timeTable.timetable.map(
-                        (period: ClassPeriod, index: number) => {
-                          const [time] = Object.keys(period);
-                          const [subjects] = Object.values(
-                            period
-                          ) as string[][]; // Ensure correct typing
-
-                          return (
-                            <tr key={index}>
-                              <td className="table-data border-[0.1px] border-black">
-                                {time}
-                              </td>
-                              {subjects?.length > 0 ? (
-                                subjects.map(
-                                  (
-                                    subject: string | null,
-                                    subIndex: number
-                                  ) => (
-                                    <td
-                                      key={subIndex}
-                                      className={`table-data ${
-                                        subject && !subject.includes("LUNCH")
-                                          ? "border-[0.1px] border-black"
-                                          : "font-bold"
-                                      }`}
-                                    >
-                                      {subject ?? "N/A"}
-                                      {/* Handle null values */}
-                                    </td>
-                                  )
-                                )
-                              ) : (
-                                <td className="w-6/6 text-center mt-[20%]">
-                                  No subject(s) available at the moment
-                                </td>
-                              )}
-                            </tr>
-                          );
-                        }
-                      )
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={daysOfWeek.length + 1}
-                          className="text-center"
-                        >
-                          Timetable data is not available
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+      {isLoadingTimetable ? (
+        <div className="flex justify-center mt-20"><Loader /></div>
+      ) : timetableData.length === 0 ? (
+        <div className="text-center py-20 text-gray-500 bg-white rounded-xl shadow-sm">
+          No timetable has been published yet for {studentClass}.
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+          <div className="min-w-[800px]">
+            {/* Header Row */}
+            <div className="grid grid-cols-6 border-b-2 border-gray-100 bg-gray-50">
+              <div className="p-4 font-bold text-gray-500 border-r border-gray-100 flex items-center justify-center">Time / Day</div>
+              {DAYS.map(day => (
+                <div key={day} className="p-4 font-bold text-center border-r border-gray-100 last:border-r-0 text-[#05878F]">{day}</div>
+              ))}
             </div>
+
+            {/* Grid Body */}
+            {timetableData[0]?.periods.map((_, periodIndex) => (
+              <div key={periodIndex} className="grid grid-cols-6 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
+                
+                {/* Time Column */}
+                <div className="p-3 border-r border-gray-100 flex flex-col justify-center items-center text-sm font-medium text-gray-500 bg-[#ECFEFF]/30">
+                  <span>{timetableData[0].periods[periodIndex].startTime}</span>
+                  <span className="text-gray-300 text-xs">to</span>
+                  <span>{timetableData[0].periods[periodIndex].endTime}</span>
+                </div>
+
+                {/* Day Columns */}
+                {DAYS.map((_, dayIndex) => {
+                  const period = timetableData[dayIndex].periods[periodIndex];
+                  
+                  return (
+                    <div 
+                      key={dayIndex} 
+                      className={`p-2 border-r border-gray-100 last:border-r-0 min-h-[100px] flex flex-col items-center justify-center relative
+                        ${period.isBreak ? 'bg-[#FBEDD9]/30' : period.subject ? 'bg-blue-50/20' : 'bg-gray-50/30'}`}
+                    >
+                      {period.isBreak ? (
+                        <span className="text-[#FF6B27] font-bold font-Lora text-center text-sm">{period.label || 'Break'}</span>
+                      ) : (
+                        <>
+                          {period.subject && (
+                            <span className="font-bold text-[#2C4084] text-center mb-1 line-clamp-2 leading-tight text-sm">
+                              {period.subject.name || 'Subject'}
+                            </span>
+                          )}
+                          {period.teacher && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full border shadow-sm text-center line-clamp-1 mt-1 bg-white text-gray-600 border-gray-200`}>
+                              {period.teacher.lastName} {period.teacher.firstName}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
-export default TimetablesGuardian;
+export default TimetableGuardian;

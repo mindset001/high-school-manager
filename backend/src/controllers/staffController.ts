@@ -95,8 +95,8 @@ export const createStaff = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // Determine initial password: use phone if provided, else fall back to default
-    const plainPassword = phone_number || 'Staff@123';
+    // Set initial password to default
+    const plainPassword = 'Staff@123';
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     // Handle image upload if provided
@@ -145,7 +145,7 @@ export const createStaff = async (req: AuthRequest, res: Response): Promise<void
       .populate('userId', 'firstName lastName email phoneNumber profileImage');
 
     res.status(201).json({ 
-      message: 'Staff created successfully. Login with email and phone number as password.', 
+      message: 'Staff created successfully. Default password is Staff@123', 
       staff: populatedStaff,
     });
   } catch (error: any) {
